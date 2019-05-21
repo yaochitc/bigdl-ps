@@ -14,7 +14,7 @@ import scala.reflect.ClassTag
 
 class LookupTable[T: ClassTag]
 (name: String, val nIndex: Int, val nOutput: Int)
-(implicit ev: TensorNumeric[T]) extends TensorModule[T] with Initializable {
+(implicit ev: TensorNumeric[T]) extends PSTensorModule[T] with Initializable {
 
   private val embedMatCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_embedding", 2 * nOutput, nIndex,
     PSTensorNumeric.getRowType(ev.getType()))
@@ -26,4 +26,12 @@ class LookupTable[T: ClassTag]
   override def updateOutput(input: Tensor[T]): Tensor[T] = ???
 
   override def updateGradInput(input: Tensor[T], gradOutput: Tensor[T]): Tensor[T] = ???
+
+  override def pullParameters(): Unit = {
+
+  }
+
+  override def pushGradient(): Unit = {
+
+  }
 }
