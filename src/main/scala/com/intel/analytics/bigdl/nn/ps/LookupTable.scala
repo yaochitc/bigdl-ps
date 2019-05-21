@@ -6,7 +6,7 @@ import com.intel.analytics.bigdl.nn.ErrorInfo
 import com.intel.analytics.bigdl.nn.abstractnn.Initializable
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
-import com.intel.analytics.bigdl.utils.ps.PSTensorNumeric
+import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
 
@@ -14,10 +14,10 @@ import scala.reflect.ClassTag
 
 class LookupTable[T: ClassTag]
 (name: String, val nIndex: Int, val nOutput: Int)
-(implicit ev: TensorNumeric[T]) extends PSTensorModule[T] with Initializable {
+(implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]) extends PSTensorModule[T] with Initializable {
 
   private val embedMatCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_embedding", 2 * nOutput, nIndex,
-    PSTensorNumeric.getRowType(ev.getType()))
+    PSUtils.getRowType(ev.getType()))
 
   lazy val matrixId: Int = PSMatrixUtils.getMatrixId(s"${name}_embedding")
 
@@ -80,7 +80,6 @@ class LookupTable[T: ClassTag]
   }
 
   override def pullParameters(): Unit = {
-
   }
 
   override def pushGradient(): Unit = {
