@@ -1,4 +1,4 @@
-package com.intel.analytics.bigdl.ps.utils
+package com.intel.analytics.bigdl.utils.ps
 
 import com.intel.analytics.bigdl.tensor.{DoubleType, FloatType, TensorDataType}
 import com.tencent.angel.ml.matrix.RowType

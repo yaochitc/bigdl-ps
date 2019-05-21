@@ -3,9 +3,9 @@ package com.intel.analytics.bigdl.nn.ps
 import com.intel.analytics.bigdl.nn.ErrorInfo
 import com.intel.analytics.bigdl.nn.abstractnn.{Initializable, TensorModule}
 import com.intel.analytics.bigdl.optim.Regularizer
-import com.intel.analytics.bigdl.ps.utils.PSTensorNumeric
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
+import com.intel.analytics.bigdl.utils.ps.PSTensorNumeric
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 
 import scala.reflect.ClassTag
@@ -17,6 +17,8 @@ class Linear[T: ClassTag]
  val withBias: Boolean = true,
  var wRegularizer: Regularizer[T] = null,
  var bRegularizer: Regularizer[T] = null,
+ private val initWeight: Tensor[T] = null,
+ private val initBias: Tensor[T] = null,
  private val initGradWeight: Tensor[T] = null,
  private val initGradBias: Tensor[T] = null
 )(implicit ev: TensorNumeric[T]) extends PSTensorModule[T] with Initializable {
@@ -30,10 +32,11 @@ class Linear[T: ClassTag]
   lazy val weightId: Int = PSMatrixUtils.getMatrixId(s"${name}_weight")
   lazy val biasId: Int = PSMatrixUtils.getMatrixId(s"${name}_bias")
 
+  val weight: Tensor[T] =
+    if (initWeight != null) initWeight else Tensor[T](outputSize, inputSize)
+  val bias: Tensor[T] =
+    if (initBias != null) initBias else if (withBias) Tensor[T](outputSize) else null
   val addBuffer: Tensor[T] = Tensor[T]()
-
-  @transient var weight: Tensor[T] = _
-  @transient var bias: Tensor[T] = _
 
   val gradWeight: Tensor[T] =
     if (initGradWeight != null) initGradWeight else Tensor[T]()
@@ -137,6 +140,6 @@ class Linear[T: ClassTag]
   }
 
   override def pushGradient(): Unit = {
-    
+
   }
 }
