@@ -1,5 +1,7 @@
 package com.intel.analytics.bigdl.nn.ps
 
+import java.util.concurrent.Future
+
 import com.intel.analytics.bigdl.nn.ErrorInfo
 import com.intel.analytics.bigdl.nn.abstractnn.{Initializable, TensorModule}
 import com.intel.analytics.bigdl.optim.Regularizer
@@ -7,6 +9,7 @@ import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.intel.analytics.bigdl.utils.ps.PSTensorNumeric
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
+import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
 
 import scala.reflect.ClassTag
 
@@ -142,4 +145,6 @@ class Linear[T: ClassTag]
   override def pushGradient(): Unit = {
 
   }
+
+  override def update(epoch: Int, batchSize: Int): Future[VoidResult] = ???
 }

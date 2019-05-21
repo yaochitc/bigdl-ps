@@ -1,11 +1,14 @@
 package com.intel.analytics.bigdl.nn.ps
 
+import java.util.concurrent.Future
+
 import com.intel.analytics.bigdl.nn.ErrorInfo
 import com.intel.analytics.bigdl.nn.abstractnn.Initializable
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.intel.analytics.bigdl.utils.ps.PSTensorNumeric
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
+import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
 
 import scala.reflect.ClassTag
 
@@ -73,7 +76,7 @@ class LookupTable[T: ClassTag]
   }
 
   override def accGradParameters(input: Tensor[T], gradOutput: Tensor[T]): Unit = {
-    
+
   }
 
   override def pullParameters(): Unit = {
@@ -83,4 +86,6 @@ class LookupTable[T: ClassTag]
   override def pushGradient(): Unit = {
 
   }
+
+  override def update(epoch: Int, batchSize: Int): Future[VoidResult] = ???
 }
