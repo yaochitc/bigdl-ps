@@ -19,6 +19,8 @@ class ParallelOptimizer[T: ClassTag]
     val sc = _dataset.originRDD().sparkContext
     val modelBroadcast = ModelBroadcast[T]().broadcast(sc, model)
 
+
+
     null
   }
 }
