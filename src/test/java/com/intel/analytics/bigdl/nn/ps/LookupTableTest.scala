@@ -4,11 +4,7 @@ import org.junit.{Assert, Test}
 
 class LookupTableTest extends Assert {
   @Test
-  def testBuild(): Unit = {
-    val lookupTable = new LookupTable[Float]("lookupTable", 100, 10)
-  }
-
-  @Test
   def testForward(): Unit = {
+    val lookupTable = new LookupTable[Float]("lookupTable", 100, 10)
   }
 }

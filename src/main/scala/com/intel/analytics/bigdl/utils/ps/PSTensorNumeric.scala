@@ -16,26 +16,26 @@ object PSTensorNumeric {
   implicit object NumericFloat extends PSTensorNumeric[Float] {
     override def getRow(matrixId: Int, rowId: Int): Tensor[Float] = {
       val vector = PSMatrixUtils.getRow(0, matrixId, rowId)
-      val arrayStorage = Storage(vector.asInstanceOf[FloatVectorStorage].getValues)
+      val arrayStorage = Storage(vector.getStorage.asInstanceOf[FloatVectorStorage].getValues)
       Tensor(arrayStorage)
     }
 
     override def getRowAsMatrix(matrixId: Int, rowId: Int, matRows: Int, matCols: Int): Tensor[Float] = {
       val vector = PSMatrixUtils.getRow(0, matrixId, rowId)
-      Tensor(vector.asInstanceOf[FloatVectorStorage].getValues, Array(matRows, matCols))
+      Tensor(vector.getStorage.asInstanceOf[FloatVectorStorage].getValues, Array(matRows, matCols))
     }
   }
 
   implicit object NumericDouble extends PSTensorNumeric[Double] {
     override def getRow(matrixId: Int, rowId: Int): Tensor[Double] = {
       val vector = PSMatrixUtils.getRow(0, matrixId, rowId)
-      val arrayStorage = Storage(vector.asInstanceOf[DoubleVectorStorage].getValues)
+      val arrayStorage = Storage(vector.getStorage.asInstanceOf[DoubleVectorStorage].getValues)
       Tensor(arrayStorage)
     }
 
     override def getRowAsMatrix(matrixId: Int, rowId: Int, matRows: Int, matCols: Int): Tensor[Double] = {
       val vector = PSMatrixUtils.getRow(0, matrixId, rowId)
-      Tensor(vector.asInstanceOf[DoubleVectorStorage].getValues, Array(matRows, matCols))
+      Tensor(vector.getStorage.asInstanceOf[DoubleVectorStorage].getValues, Array(matRows, matCols))
     }
   }
 

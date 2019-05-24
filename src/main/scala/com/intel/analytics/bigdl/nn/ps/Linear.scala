@@ -24,10 +24,13 @@ class Linear[T: ClassTag]
  private val initGradBias: Tensor[T] = null
 )(implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]) extends PSTensorModule[T] with Initializable {
   val weightCtx =
-    PSMatrixUtils.createPSMatrixCtx(s"${name}_weight", inputSize * 2, outputSize, PSUtils.getRowType(ev.getType()))
+    PSMatrixUtils.createPSMatrixCtx(s"${name}_weight", 2, inputSize * outputSize, PSUtils.getRowType(ev.getType()))
+  PSMatrixUtils.createPSMatrix(weightCtx)
 
   val biasCtx = if (withBias) {
-    PSMatrixUtils.createPSMatrixCtx(s"${name}_bias", 2, outputSize, PSUtils.getRowType(ev.getType()))
+    val biasCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_bias", 2, outputSize, PSUtils.getRowType(ev.getType()))
+    PSMatrixUtils.createPSMatrix(biasCtx)
+    biasCtx
   } else null
 
   lazy val weightId: Int = PSMatrixUtils.getMatrixId(s"${name}_weight")

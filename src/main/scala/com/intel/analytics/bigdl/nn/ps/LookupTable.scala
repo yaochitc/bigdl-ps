@@ -27,6 +27,7 @@ class LookupTable[T: ClassTag]
 
   private val embedMatCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_embedding", 2 * nOutput, nIndex,
     PSUtils.getRowType(ev.getType()))
+  PSMatrixUtils.createPSMatrix(embedMatCtx)
 
   lazy val matrixId: Int = PSMatrixUtils.getMatrixId(s"${name}_embedding")
 
