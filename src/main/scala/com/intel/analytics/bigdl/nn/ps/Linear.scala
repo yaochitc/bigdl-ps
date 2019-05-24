@@ -146,7 +146,10 @@ class Linear[T: ClassTag]
   }
 
   override def pushGradient(): Unit = {
-
+    psEv.incrementRowByMatrix(weightId, 1, gradWeight)
+    if (withBias) {
+      psEv.incrementRow(biasId, 1, gradBias)
+    }
   }
 
   override def update(epoch: Int, batchSize: Int): Future[VoidResult] = ???

@@ -9,6 +9,9 @@ trait PSTensorNumeric[@specialized(Float, Double) T] extends Serializable {
 
   def getRowAsMatrix(matrixId: Int, rowId: Int, matRows: Int, matCols: Int): Tensor[T]
 
+  def incrementRow(matrixId: Int, rowId: Int, row: Tensor[T]): Unit
+
+  def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[T]): Unit
 }
 
 object PSTensorNumeric {
@@ -24,6 +27,12 @@ object PSTensorNumeric {
       val vector = PSMatrixUtils.getRow(0, matrixId, rowId)
       Tensor(vector.getStorage.asInstanceOf[FloatVectorStorage].getValues, Array(matRows, matCols))
     }
+
+    override def incrementRow(matrixId: Int, rowId: Int, row: Tensor[Float]): Unit = {
+    }
+
+    override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Float]): Unit = {
+    }
   }
 
   implicit object NumericDouble extends PSTensorNumeric[Double] {
@@ -36,6 +45,14 @@ object PSTensorNumeric {
     override def getRowAsMatrix(matrixId: Int, rowId: Int, matRows: Int, matCols: Int): Tensor[Double] = {
       val vector = PSMatrixUtils.getRow(0, matrixId, rowId)
       Tensor(vector.getStorage.asInstanceOf[DoubleVectorStorage].getValues, Array(matRows, matCols))
+    }
+
+    override def incrementRow(matrixId: Int, rowId: Int, row: Tensor[Double]): Unit = {
+
+    }
+
+    override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Double]): Unit = {
+
     }
   }
 
