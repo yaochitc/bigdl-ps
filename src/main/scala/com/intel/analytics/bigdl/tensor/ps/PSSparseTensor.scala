@@ -12,7 +12,8 @@ class PSSparseTensor[@specialized(Float, Double) T: ClassTag]
  _nElement: Int,
  _shape: Array[Int],
  _indicesOffset: Array[Int],
- nDimension: Int)
+ nDimension: Int,
+ clock: Int = 0)
 (implicit ev: TensorNumeric[T]) extends SparseTensor[T](_indices, _values, _storageOffset, _nElement, _shape, _indicesOffset, nDimension) {
 
 }
