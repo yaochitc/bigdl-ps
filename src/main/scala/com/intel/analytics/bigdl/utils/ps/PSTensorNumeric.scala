@@ -3,6 +3,7 @@ package com.intel.analytics.bigdl.utils.ps
 import com.intel.analytics.bigdl.tensor.ps.PSDenseTensor
 import com.intel.analytics.bigdl.tensor.{Storage, Tensor}
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
+import com.tencent.angel.ml.math2.VFactory
 import com.tencent.angel.ml.math2.storage.{DoubleVectorStorage, FloatVectorStorage}
 
 trait PSTensorNumeric[@specialized(Float, Double) T] extends Serializable {
@@ -10,9 +11,9 @@ trait PSTensorNumeric[@specialized(Float, Double) T] extends Serializable {
 
   def getRowAsMatrix(matrixId: Int, rowId: Int, matRows: Int, matCols: Int): PSDenseTensor[T]
 
-  def incrementRow(matrixId: Int, rowId: Int, row: Tensor[T]): Unit
+  def incrementRow(matrixId: Int, rowId: Int, row: PSDenseTensor[T]): Unit
 
-  def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[T]): Unit
+  def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: PSDenseTensor[T]): Unit
 }
 
 object PSTensorNumeric {
@@ -30,12 +31,14 @@ object PSTensorNumeric {
         Array(matRows, matCols)), vector.getMatrixId, vector.getClock)
     }
 
-    override def incrementRow(matrixId: Int, rowId: Int, row: Tensor[Float]): Unit = {
-
+    override def incrementRow(matrixId: Int, rowId: Int, row: PSDenseTensor[Float]): Unit = {
+      val data = row.storage().slice(row.storageOffset(), row.nElement()).toArray
+      val vector = VFactory.denseFloatVector(row.matrixId, rowId, row.clock, data)
+      PSMatrixUtils.incrementRow(matrixId, rowId, vector)
     }
 
-    override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Float]): Unit = {
-
+    override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: PSDenseTensor[Float]): Unit = {
+      incrementRow(matrixId, rowId, mat)
     }
   }
 
@@ -52,11 +55,14 @@ object PSTensorNumeric {
         Array(matRows, matCols)), vector.getMatrixId, vector.getClock)
     }
 
-    override def incrementRow(matrixId: Int, rowId: Int, row: Tensor[Double]): Unit = {
+    override def incrementRow(matrixId: Int, rowId: Int, row: PSDenseTensor[Double]): Unit = {
+      val data = row.storage().slice(row.storageOffset(), row.nElement()).toArray
+      val vector = VFactory.denseDoubleVector(row.matrixId, rowId, row.clock, data)
+      PSMatrixUtils.incrementRow(matrixId, rowId, vector)
     }
 
-    override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Double]): Unit = {
-
+    override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: PSDenseTensor[Double]): Unit = {
+      incrementRow(matrixId, rowId, mat)
     }
   }
 

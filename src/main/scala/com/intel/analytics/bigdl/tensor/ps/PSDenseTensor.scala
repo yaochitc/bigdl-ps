@@ -25,6 +25,6 @@ class PSDenseTensor[@specialized(Float, Double) T: ClassTag]
 }
 
 object PSDenseTensor {
-  def apply[@specialized(Float, Double) T: ClassTag](tensor: Tensor[T], matrixId: Int, clock: Int)(
+  def apply[@specialized(Float, Double) T: ClassTag](tensor: Tensor[T], matrixId: Int, clock: Int = 0)(
     implicit ev: TensorNumeric[T]): PSDenseTensor[T] = new PSDenseTensor[T](tensor.asInstanceOf[DenseTensor[T]], matrixId, clock)
 }
