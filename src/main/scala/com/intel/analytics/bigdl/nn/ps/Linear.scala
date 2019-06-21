@@ -7,7 +7,6 @@ import com.intel.analytics.bigdl.nn.abstractnn.{Initializable, TensorModule}
 import com.intel.analytics.bigdl.optim.Regularizer
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
-import com.intel.analytics.bigdl.tensor.ps.PSDenseTensor
 import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
@@ -42,12 +41,12 @@ class Linear[T: ClassTag]
 
   val addBuffer: Tensor[T] = Tensor[T]()
 
-  val gradWeight: PSDenseTensor[T] =
-    if (initGradWeight != null) PSDenseTensor[T](initGradWeight, weightId)
-    else PSDenseTensor[T](Tensor[T](), weightId, 0)
-  val gradBias: PSDenseTensor[T] =
-    if (initGradBias != null) PSDenseTensor[T](initGradBias, biasId)
-    else if (withBias) PSDenseTensor[T](Tensor[T](), biasId, 0)
+  val gradWeight: Tensor[T] =
+    if (initGradWeight != null) initGradWeight
+    else Tensor[T]()
+  val gradBias: Tensor[T] =
+    if (initGradBias != null) initGradBias
+    else if (withBias) Tensor[T]()
     else null
 
   override def updateOutput(input: Tensor[T]): Tensor[T] = {
@@ -142,7 +141,7 @@ class Linear[T: ClassTag]
     this
   }
 
-  override def pullParameters(): Unit = {
+  override def pullParameters(input: Tensor[T]): Unit = {
     weight = psEv.getRowAsMatrix(weightId, 0, inputSize, outputSize)
     if (withBias) {
       bias = psEv.getRow(biasId, 0)

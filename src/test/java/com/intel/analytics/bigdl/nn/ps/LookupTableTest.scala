@@ -13,7 +13,10 @@ class LookupTableTest extends Assert {
       .setMaster("local")
     PSContext.getOrCreate(new SparkContext(sparkConf))
     val lookupTable = new LookupTable[Float]("lookupTable", 10, 10)
-    lookupTable.pullParameters()
-    lookupTable.forward(Tensor[Float](1, 1).setValue(1, 1))
+    val input = Tensor[Float](2, 1)
+    input.setValue(1, 1, 1)
+    input.setValue(2, 1, 2)
+    lookupTable.pullParameters(input)
+    lookupTable.forward(input)
   }
 }

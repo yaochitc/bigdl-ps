@@ -3,11 +3,12 @@ package com.intel.analytics.bigdl.nn.ps
 import java.util.concurrent.Future
 
 import breeze.numerics.{abs, pow}
-import com.intel.analytics.bigdl.nn.{ErrorInfo, RandomNormal, VariableFormat}
+import com.intel.analytics.bigdl.nn.ErrorInfo
 import com.intel.analytics.bigdl.nn.abstractnn.Initializable
 import com.intel.analytics.bigdl.optim.Regularizer
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
+import com.intel.analytics.bigdl.tensor.ps.PSSparseTensor
 import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
@@ -31,21 +32,12 @@ class LookupTable[T: ClassTag]
 
   lazy val matrixId: Int = PSMatrixUtils.getMatrixId(s"${name}_embedding")
 
-  @transient var weight: Tensor[T] = _
+  @transient var weight: PSSparseTensor[T] = _
   @transient var gradWeight: Tensor[T] = _
 
   private var inputBuffer = Tensor[T]()
   private var normBuffer = Tensor[T]()
   private val countBuffer = Tensor[T]()
-
-  {
-    val wInit = RandomNormal(0, 1)
-    setInitMethod(weightInitMethod = wInit)
-  }
-
-  override def reset(): Unit = {
-    weightInitMethod.init(weight, VariableFormat.Default)
-  }
 
   private def renorm(input: Tensor[T]): Unit = {
     if (Double.MaxValue == maxNorm) {
@@ -230,7 +222,7 @@ class LookupTable[T: ClassTag]
     }
   }
 
-  override def clearState() : this.type = {
+  override def clearState(): this.type = {
     super.clearState()
     inputBuffer.set()
     countBuffer.set()
@@ -238,8 +230,30 @@ class LookupTable[T: ClassTag]
     this
   }
 
-  override def pullParameters(): Unit = {
+  override def pullParameters(input: Tensor[T]): Unit = {
+    inputBuffer = input.contiguous()
+    require(inputBuffer.dim() == 1 || inputBuffer.dim() == 2,
+      s"LookupTable: input must be a vector or matrix, input dim ${inputBuffer.dim()}")
 
+    if (inputBuffer.dim() == 2) {
+      inputBuffer.view(inputBuffer.nElement())
+    }
+
+    val input_data = inputBuffer.storage().array()
+    val input_offset = inputBuffer.storageOffset() - 1
+    val numEle = inputBuffer.nElement()
+
+    var i = 0
+    while (i < numEle) {
+      require(ev.isGreaterEq(input_data(i + input_offset), ev.one),
+        "LookupTable: elements of input should be greater than or equal to 1")
+      i += 1
+    }
+
+    val rows = (0 until nOutput).toArray
+    val indices = (0 until numEle).map(i => ev.toType[Long](input_data(i + input_offset)) - 1).toArray
+
+    weight = psEv.getRowAsSparseMatrix(matrixId, rows, indices)
   }
 
   override def pushGradient(): Unit = {

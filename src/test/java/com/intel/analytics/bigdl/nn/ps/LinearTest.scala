@@ -13,7 +13,8 @@ class LinearTest extends Assert {
       .setMaster("local")
     PSContext.getOrCreate(new SparkContext(sparkConf))
     val linear = new Linear[Float]("linear", 10, 10)
-    linear.pullParameters()
-    linear.forward(Tensor[Float](5, 10).zero())
+    val input = Tensor[Float](5, 10).zero()
+    linear.pullParameters(input)
+    linear.forward(input)
   }
 }
