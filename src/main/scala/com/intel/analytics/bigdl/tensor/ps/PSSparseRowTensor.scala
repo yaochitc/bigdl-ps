@@ -1,29 +1,36 @@
 package com.intel.analytics.bigdl.tensor.ps
 
 import breeze.linalg.{DenseMatrix, DenseVector}
-import com.intel.analytics.bigdl.tensor._
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
+import com.intel.analytics.bigdl.tensor._
 import com.intel.analytics.bigdl.utils.Table
+import com.intel.analytics.bigdl.utils.ps.PSTensorNumeric
 import com.tencent.angel.ml.math2.vector._
 import org.apache.spark.mllib.linalg
 import org.apache.spark.mllib.linalg.Matrix
 
 import scala.reflect.ClassTag
 
-class PSSparseTensor[@specialized(Float, Double) T: ClassTag]
-(vectors: Map[Int, Vector])
-(implicit ev: TensorNumeric[T]) extends Tensor[T] {
+class PSSparseRowTensor[@specialized(Float, Double) T: ClassTag]
+(_vectors: Map[Int, Vector],
+ _size: Array[Int])
+(implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]) extends Tensor[T] {
   override def isEmpty: Boolean = ???
 
   override def isScalar: Boolean = ???
 
-  override def nDimension(): Int = ???
+  override def nDimension(): Int = 2
 
   override def dim(): Int = ???
 
-  override def size(): Array[Int] = ???
+  override def size(): Array[Int] = _size
 
-  override def size(dim: Int): Int = ???
+  override def size(dim: Int): Int = {
+    require(dim == 1 || dim == 2,
+      s"PSSparseRowTensor: input must be equal to 1 or 2, input dim ${dim}")
+
+    _size(dim - 1)
+  }
 
   override def stride(): Array[Int] = ???
 
@@ -73,17 +80,17 @@ class PSSparseTensor[@specialized(Float, Double) T: ClassTag]
 
   override def update(indexes: Array[Int], value: T): Unit = ???
 
-  override def setValue(value: T): PSSparseTensor.this.type = ???
+  override def setValue(value: T): PSSparseRowTensor.this.type = ???
 
-  override def setValue(d1: Int, value: T): PSSparseTensor.this.type = ???
+  override def setValue(d1: Int, value: T): PSSparseRowTensor.this.type = ???
 
-  override def setValue(d1: Int, d2: Int, value: T): PSSparseTensor.this.type = ???
+  override def setValue(d1: Int, d2: Int, value: T): PSSparseRowTensor.this.type = ???
 
-  override def setValue(d1: Int, d2: Int, d3: Int, value: T): PSSparseTensor.this.type = ???
+  override def setValue(d1: Int, d2: Int, d3: Int, value: T): PSSparseRowTensor.this.type = ???
 
-  override def setValue(d1: Int, d2: Int, d3: Int, d4: Int, value: T): PSSparseTensor.this.type = ???
+  override def setValue(d1: Int, d2: Int, d3: Int, d4: Int, value: T): PSSparseRowTensor.this.type = ???
 
-  override def setValue(d1: Int, d2: Int, d3: Int, d4: Int, d5: Int, value: T): PSSparseTensor.this.type = ???
+  override def setValue(d1: Int, d2: Int, d3: Int, d4: Int, d5: Int, value: T): PSSparseRowTensor.this.type = ???
 
   override def update(t: Table, value: T): Unit = ???
 
@@ -117,7 +124,12 @@ class PSSparseTensor[@specialized(Float, Double) T: ClassTag]
 
   override def nElement(): Int = ???
 
-  override def select(dim: Int, index: Int): Tensor[T] = ???
+  override def select(dim: Int, index: Int): Tensor[T] = {
+    require(dim == 1,
+      s"PSSparseRowTensor: input must be equal to 1, input dim ${dim}")
+
+    psEv.vector2Tensor(_vectors(dim))
+  }
 
   override def storage(): Storage[T] = ???
 
@@ -177,7 +189,7 @@ class PSSparseTensor[@specialized(Float, Double) T: ClassTag]
 
   override def reshape(sizes: Array[Int]): Tensor[T] = ???
 
-  override def save(path: String, overWrite: Boolean): PSSparseTensor.this.type = ???
+  override def save(path: String, overWrite: Boolean): PSSparseRowTensor.this.type = ???
 
   override def getTensorNumeric(): TensorNumeric[T] = ???
 
@@ -421,7 +433,7 @@ class PSSparseTensor[@specialized(Float, Double) T: ClassTag]
     throw new IllegalArgumentException("SparseTensor cannot be cast to QuantizedTensor")
 }
 
-object PSSparseTensor {
-  def apply[@specialized(Float, Double) T: ClassTag](vectors: Map[Int, Vector])(
-    implicit ev: TensorNumeric[T]): PSSparseTensor[T] = new PSSparseTensor[T](vectors)
+object PSSparseRowTensor {
+  def apply[@specialized(Float, Double) T: ClassTag](vectors: Map[Int, Vector], nVector: Int, vectorSize: Int)(
+    implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]): PSSparseRowTensor[T] = new PSSparseRowTensor[T](vectors, Array(nVector, vectorSize))
 }

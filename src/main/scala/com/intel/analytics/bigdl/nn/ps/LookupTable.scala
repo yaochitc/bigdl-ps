@@ -8,7 +8,7 @@ import com.intel.analytics.bigdl.nn.abstractnn.Initializable
 import com.intel.analytics.bigdl.optim.Regularizer
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
-import com.intel.analytics.bigdl.tensor.ps.PSSparseTensor
+import com.intel.analytics.bigdl.tensor.ps.PSSparseRowTensor
 import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
@@ -32,7 +32,7 @@ class LookupTable[T: ClassTag]
 
   lazy val matrixId: Int = PSMatrixUtils.getMatrixId(s"${name}_embedding")
 
-  @transient var weight: PSSparseTensor[T] = _
+  @transient var weight: PSSparseRowTensor[T] = _
   @transient var gradWeight: Tensor[T] = _
 
   private var inputBuffer = Tensor[T]()
@@ -253,7 +253,7 @@ class LookupTable[T: ClassTag]
     val rows = (0 until nOutput).toArray
     val indices = (0 until numEle).map(i => ev.toType[Long](input_data(i + input_offset)) - 1).toArray
 
-    weight = psEv.getRowAsSparseMatrix(matrixId, rows, indices)
+    weight = psEv.getRowAsSparseMatrix(matrixId, nIndex, rows, indices)
   }
 
   override def pushGradient(): Unit = {

@@ -1,9 +1,10 @@
 package com.intel.analytics.bigdl.utils.ps
 
-import com.intel.analytics.bigdl.tensor.ps.PSSparseTensor
+import com.intel.analytics.bigdl.tensor.ps.PSSparseRowTensor
 import com.intel.analytics.bigdl.tensor.{Storage, Tensor}
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.math2.VFactory
+import com.tencent.angel.ml.math2.vector._
 import com.tencent.angel.ml.math2.storage.{DoubleVectorStorage, FloatVectorStorage}
 import com.tencent.angel.ml.psf.columns.{GetColsFunc, GetColsParam, GetColsResult}
 import com.tencent.angel.psagent.PSAgentContext
@@ -15,11 +16,13 @@ trait PSTensorNumeric[@specialized(Float, Double) T] extends Serializable {
 
   def getRowAsMatrix(matrixId: Int, rowId: Int, matRows: Int, matCols: Int): Tensor[T]
 
-  def getRowAsSparseMatrix(matrixId: Int, rows: Array[Int], cols: Array[Long]): PSSparseTensor[T]
+  def getRowAsSparseMatrix(matrixId: Int, nVector: Int, rows: Array[Int], cols: Array[Long]): PSSparseRowTensor[T]
 
   def incrementRow(matrixId: Int, rowId: Int, row: Tensor[T]): Unit
 
   def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[T]): Unit
+
+  def vector2Tensor(vector: Vector): Tensor[T]
 }
 
 object PSTensorNumeric {
@@ -37,12 +40,12 @@ object PSTensorNumeric {
         Array(matRows, matCols))
     }
 
-    override def getRowAsSparseMatrix(matrixId: Int, rows: Array[Int], cols: Array[Long]): PSSparseTensor[Float] = {
+    override def getRowAsSparseMatrix(matrixId: Int, nVector: Int, rows: Array[Int], cols: Array[Long]): PSSparseRowTensor[Float] = {
       val param = new GetColsParam(matrixId, rows, cols)
       val func = new GetColsFunc(param)
       val result = PSAgentContext.get.getUserRequestAdapter.get(func).asInstanceOf[GetColsResult]
       val vectors = result.results.asScala.map { case (id, vector) => (id.toInt, vector) }.toMap
-      PSSparseTensor(vectors)
+      PSSparseRowTensor(vectors, nVector, rows.length)
     }
 
     override def incrementRow(matrixId: Int, rowId: Int, row: Tensor[Float]): Unit = {
@@ -53,6 +56,11 @@ object PSTensorNumeric {
 
     override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Float]): Unit = {
       incrementRow(matrixId, rowId, mat)
+    }
+
+    override def vector2Tensor(vector: Vector): Tensor[Float] = {
+      Tensor(vector.getStorage.asInstanceOf[FloatVectorStorage].getValues,
+        Array(vector.getSize.toInt))
     }
   }
 
@@ -69,12 +77,12 @@ object PSTensorNumeric {
         Array(matRows, matCols))
     }
 
-    override def getRowAsSparseMatrix(matrixId: Int, rows: Array[Int], cols: Array[Long]): PSSparseTensor[Double] = {
+    override def getRowAsSparseMatrix(matrixId: Int, nVector: Int, rows: Array[Int], cols: Array[Long]): PSSparseRowTensor[Double] = {
       val param = new GetColsParam(matrixId, rows, cols)
       val func = new GetColsFunc(param)
       val result = PSAgentContext.get.getUserRequestAdapter.get(func).asInstanceOf[GetColsResult]
       val vectors = result.results.asScala.map { case (id, vector) => (id.toInt, vector) }.toMap
-      PSSparseTensor(vectors)
+      PSSparseRowTensor(vectors, nVector, rows.length)
     }
 
     override def incrementRow(matrixId: Int, rowId: Int, row: Tensor[Double]): Unit = {
@@ -85,6 +93,11 @@ object PSTensorNumeric {
 
     override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Double]): Unit = {
       incrementRow(matrixId, rowId, mat)
+    }
+
+    override def vector2Tensor(vector: Vector): Tensor[Double] = {
+      Tensor(vector.getStorage.asInstanceOf[DoubleVectorStorage].getValues,
+        Array(vector.getSize.toInt))
     }
   }
 
