@@ -172,7 +172,6 @@ class LookupTable[T: ClassTag]
 
   override def accGradParameters(input: Tensor[T], gradOutput: Tensor[T]): Unit = {
     inputBuffer = input.contiguous()
-    require(gradWeight.isContiguous(), "LookupTable: gradWeight must be contiguous")
     require(inputBuffer.dim() == 1 || inputBuffer.dim() == 2,
       s"LookupTable: input must be a vector or matrix, input dim ${inputBuffer.dim()}")
 

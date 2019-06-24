@@ -142,7 +142,7 @@ class Linear[T: ClassTag]
   }
 
   override def pullParameters(input: Tensor[T]): Unit = {
-    weight = psEv.getRowAsMatrix(weightId, 0, inputSize, outputSize)
+    weight = psEv.getRowAsMatrix(weightId, 0, outputSize, inputSize)
     if (withBias) {
       bias = psEv.getRow(biasId, 0)
     }

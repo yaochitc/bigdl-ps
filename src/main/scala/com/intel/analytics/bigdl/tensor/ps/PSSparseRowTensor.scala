@@ -128,7 +128,7 @@ class PSSparseRowTensor[@specialized(Float, Double) T: ClassTag]
     require(dim == 1,
       s"PSSparseRowTensor: input must be equal to 1, input dim ${dim}")
 
-    psEv.vector2Tensor(_vectors(dim))
+    psEv.vector2Tensor(_vectors(index - 1))
   }
 
   override def storage(): Storage[T] = ???
