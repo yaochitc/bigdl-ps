@@ -19,5 +19,7 @@ class LinearTest extends Assert {
 
     val gradOutput = Tensor[Float](5, 1).zero()
     linear.backward(input, gradOutput)
+
+    linear.pushGradient()
   }
 }

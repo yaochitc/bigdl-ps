@@ -22,6 +22,8 @@ trait PSTensorNumeric[@specialized(Float, Double) T] extends Serializable {
 
   def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[T]): Unit
 
+  def array2Vector(array: Array[T], offset: Int, length: Int): Vector
+
   def vector2Tensor(vector: Vector): Tensor[T]
 }
 
@@ -44,18 +46,24 @@ object PSTensorNumeric {
       val param = new GetColsParam(matrixId, rows, cols)
       val func = new GetColsFunc(param)
       val result = PSAgentContext.get.getUserRequestAdapter.get(func).asInstanceOf[GetColsResult]
-      val vectors = result.results.asScala.map { case (id, vector) => (id.toInt, vector) }.toMap
+      val vectors = result.results.asScala.map { case (id, vector) => (Long2long(id), vector) }.toMap
       PSSparseRowTensor(vectors, nVector, rows.length)
     }
 
     override def incrementRow(matrixId: Int, rowId: Int, row: Tensor[Float]): Unit = {
-      val data = row.storage().slice(row.storageOffset(), row.nElement()).toArray
+      val data = row.storage().slice(row.storageOffset() - 1, row.nElement()).toArray
       val vector = VFactory.denseFloatVector(matrixId, rowId, 0, data)
       PSMatrixUtils.incrementRow(matrixId, rowId, vector)
     }
 
     override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Float]): Unit = {
       incrementRow(matrixId, rowId, mat)
+    }
+
+    override def array2Vector(array: Array[Float], offset: Int, length: Int): Vector = {
+      val vec = Array.ofDim[Float](length)
+      System.arraycopy(array, offset, vec, 0, length)
+      VFactory.denseFloatVector(vec)
     }
 
     override def vector2Tensor(vector: Vector): Tensor[Float] = {
@@ -81,18 +89,24 @@ object PSTensorNumeric {
       val param = new GetColsParam(matrixId, rows, cols)
       val func = new GetColsFunc(param)
       val result = PSAgentContext.get.getUserRequestAdapter.get(func).asInstanceOf[GetColsResult]
-      val vectors = result.results.asScala.map { case (id, vector) => (id.toInt, vector) }.toMap
+      val vectors = result.results.asScala.map { case (id, vector) => (Long2long(id), vector) }.toMap
       PSSparseRowTensor(vectors, nVector, rows.length)
     }
 
     override def incrementRow(matrixId: Int, rowId: Int, row: Tensor[Double]): Unit = {
-      val data = row.storage().slice(row.storageOffset(), row.nElement()).toArray
+      val data = row.storage().slice(row.storageOffset() - 1, row.nElement()).toArray
       val vector = VFactory.denseDoubleVector(matrixId, rowId, 0, data)
       PSMatrixUtils.incrementRow(matrixId, rowId, vector)
     }
 
     override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Double]): Unit = {
       incrementRow(matrixId, rowId, mat)
+    }
+
+    override def array2Vector(array: Array[Double], offset: Int, length: Int): Vector = {
+      val vec = Array.ofDim[Double](length)
+      System.arraycopy(array, offset, vec, 0, length)
+      VFactory.denseDoubleVector(vec)
     }
 
     override def vector2Tensor(vector: Vector): Tensor[Double] = {

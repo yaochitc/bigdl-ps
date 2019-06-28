@@ -11,7 +11,12 @@ import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.intel.analytics.bigdl.tensor.ps.PSSparseRowTensor
 import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
+import com.tencent.angel.ml.math2.VFactory
 import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
+import com.tencent.angel.ml.psf.columns.{UpdateColsFunc, UpdateColsParam}
+import com.tencent.angel.psagent.PSAgentContext
+
+import scala.collection.JavaConverters._
 
 import scala.reflect.ClassTag
 
@@ -33,7 +38,7 @@ class LookupTable[T: ClassTag]
   lazy val matrixId: Int = PSMatrixUtils.getMatrixId(s"${name}_embedding")
 
   @transient var weight: PSSparseRowTensor[T] = _
-  @transient var gradWeight: Tensor[T] = _
+  @transient var gradWeight: PSSparseRowTensor[T] = _
 
   private var inputBuffer = Tensor[T]()
   private var normBuffer = Tensor[T]()
@@ -192,32 +197,29 @@ class LookupTable[T: ClassTag]
 
     var i = 0
     while (i < numEle) {
-      require(ev.isGreater(ev.fromType(gradWeight.size(1) + 1), input_data(i + input_offset)),
-        s"LookupTable: elements of input should be little than or equal to $nIndex + 1")
       require(ev.isGreaterEq(input_data(i + input_offset), ev.one),
         "LookupTable: elements of input should be greater than or equal to 1")
       i += 1
     }
     if (scaleW != 0) {
-      val gw = gradWeight.storage().array()
       val go = _gradOutput.storage().array()
-      val stride = gradWeight.stride(1)
+      val stride = nOutput
 
-      i = 0
-      while (i < numEle) {
-        if (input_data(i + input_offset) != paddingValue) {
+
+      val map = (0 until numEle).filter(i => input_data(i + input_offset) != paddingValue)
+        .map(i => {
           val k = ev.toType[Int](input_data(i + input_offset)) - 1
           val scale_ = if (null != count_data) scaleW /
             ev.toType[Double](count_data(k)) else scaleW
-          ev.axpy(stride, ev.fromType(scale_), go, i * stride + _gradOutput.storageOffset() - 1, 1,
-            gw, k * stride + gradWeight.storageOffset() - 1, 1)
-        }
-        i += 1
-      }
+          val gradient = psEv.array2Vector(go, i * stride + _gradOutput.storageOffset() - 1, stride)
+          (k.toLong, gradient.imul(scale_))
+        }).toMap
 
       if (null != wRegularizer) {
         wRegularizer.accRegularization(weight, gradWeight, scaleW)
       }
+
+      gradWeight = PSSparseRowTensor(map, nIndex, nOutput)
     }
   }
 
@@ -256,7 +258,13 @@ class LookupTable[T: ClassTag]
   }
 
   override def pushGradient(): Unit = {
+    val rowNums = (nOutput until 2 * nOutput).toArray
+    val indices = VFactory.denseLongVector(gradWeight.getVectors.keys.toArray)
+    val vectors = gradWeight.getVectors.map { case (key, vector) => (long2Long(key), vector) }.asJava
 
+    val param = new UpdateColsParam(matrixId, rowNums, indices, vectors)
+    val func = new UpdateColsFunc(param)
+    PSAgentContext.get().getUserRequestAdapter.update(func).get()
   }
 
   override def update(epoch: Int, batchSize: Int): Future[VoidResult] = ???

@@ -20,5 +20,7 @@ class LookupTableTest extends Assert {
 
     val gradOutput = Tensor[Float](2, 1, 10).zero()
     lookupTable.backward(input, gradOutput)
+
+    lookupTable.pushGradient()
   }
 }

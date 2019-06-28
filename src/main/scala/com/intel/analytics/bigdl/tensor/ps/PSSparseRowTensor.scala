@@ -12,9 +12,11 @@ import org.apache.spark.mllib.linalg.Matrix
 import scala.reflect.ClassTag
 
 class PSSparseRowTensor[@specialized(Float, Double) T: ClassTag]
-(_vectors: Map[Int, Vector],
+(_vectors: Map[Long, Vector],
  _size: Array[Int])
 (implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]) extends Tensor[T] {
+  def getVectors: Map[Long, Vector] = _vectors
+
   override def isEmpty: Boolean = ???
 
   override def isScalar: Boolean = ???
@@ -434,6 +436,6 @@ class PSSparseRowTensor[@specialized(Float, Double) T: ClassTag]
 }
 
 object PSSparseRowTensor {
-  def apply[@specialized(Float, Double) T: ClassTag](vectors: Map[Int, Vector], nVector: Int, vectorSize: Int)(
+  def apply[@specialized(Float, Double) T: ClassTag](vectors: Map[Long, Vector], nVector: Int, vectorSize: Int)(
     implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]): PSSparseRowTensor[T] = new PSSparseRowTensor[T](vectors, Array(nVector, vectorSize))
 }
