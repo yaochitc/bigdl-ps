@@ -42,5 +42,10 @@ class GraphOptimizer[T: ClassTag]
 )(implicit ev: TensorNumeric[T]) extends Optimizer[T, MiniBatch[T]](
   _model, _dataset, _criterion) {
 
-  override def optimize(): Module[T] = ???
+  override def optimize(): Module[T] = {
+    val sc = _dataset.originRDD().sparkContext
+    val dataRDD = _dataset.originRDD()
+
+    null
+  }
 }
