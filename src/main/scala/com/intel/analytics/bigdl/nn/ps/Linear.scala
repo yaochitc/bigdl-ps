@@ -8,6 +8,7 @@ import com.intel.analytics.bigdl.optim.Regularizer
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
+import com.tencent.angel.ml.core.optimizer.Optimizer
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
 
@@ -155,5 +156,8 @@ class Linear[T: ClassTag]
     }
   }
 
-  override def update(epoch: Int, batchSize: Int): Future[VoidResult] = ???
+  override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Future[VoidResult] = {
+    optimizer.update(weightId, 1, epoch, batchSize)
+    optimizer.update(biasId, 1, epoch, batchSize)
+  }
 }

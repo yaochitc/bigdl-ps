@@ -10,6 +10,7 @@ import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.intel.analytics.bigdl.tensor.ps.PSSparseRowTensor
 import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
+import com.tencent.angel.ml.core.optimizer.Optimizer
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.math2.VFactory
 import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
@@ -17,7 +18,6 @@ import com.tencent.angel.ml.psf.columns.{UpdateColsFunc, UpdateColsParam}
 import com.tencent.angel.psagent.PSAgentContext
 
 import scala.collection.JavaConverters._
-
 import scala.reflect.ClassTag
 
 class LookupTable[T: ClassTag]
@@ -215,11 +215,11 @@ class LookupTable[T: ClassTag]
           (k.toLong, gradient.imul(scale_))
         }).toMap
 
+      gradWeight = PSSparseRowTensor(map, nIndex, nOutput)
+
       if (null != wRegularizer) {
         wRegularizer.accRegularization(weight, gradWeight, scaleW)
       }
-
-      gradWeight = PSSparseRowTensor(map, nIndex, nOutput)
     }
   }
 
@@ -267,5 +267,7 @@ class LookupTable[T: ClassTag]
     PSAgentContext.get().getUserRequestAdapter.update(func).get()
   }
 
-  override def update(epoch: Int, batchSize: Int): Future[VoidResult] = ???
+  override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Future[VoidResult] = {
+    optimizer.update(matrixId, nIndex, epoch, batchSize)
+  }
 }

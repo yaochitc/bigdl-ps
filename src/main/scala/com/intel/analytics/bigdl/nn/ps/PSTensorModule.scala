@@ -5,6 +5,7 @@ import java.util.concurrent.Future
 import com.intel.analytics.bigdl.nn.abstractnn.TensorModule
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
+import com.tencent.angel.ml.core.optimizer.Optimizer
 import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
 
 import scala.reflect.ClassTag
@@ -15,5 +16,5 @@ abstract class PSTensorModule[T: ClassTag]
 
   def pushGradient(): Unit
 
-  def update(epoch: Int, batchSize: Int): Future[VoidResult]
+  def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Future[VoidResult]
 }
