@@ -19,8 +19,8 @@ class GraphOptimizerTest extends Assert {
     Engine.init
 
     val samples = (0 until 1000).map(i => {
-      val feature = Tensor[Float](20, 1)
-      val label = Tensor[Float](1)
+      val feature = Tensor[Float](20).zero()
+      val label = Tensor[Float](1).zero()
 
       Sample(feature, label)
     })

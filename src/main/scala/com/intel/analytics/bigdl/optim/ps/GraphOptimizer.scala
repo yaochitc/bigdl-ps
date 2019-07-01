@@ -3,6 +3,7 @@ package com.intel.analytics.bigdl.optim.ps
 import com.intel.analytics.bigdl.dataset._
 import com.intel.analytics.bigdl.optim.Optimizer
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
+import com.intel.analytics.bigdl.utils.T
 import com.intel.analytics.bigdl.{Criterion, Module}
 import com.tencent.angel.ml.core.optimizer.{Optimizer => AngelOptimizer}
 import org.apache.spark.rdd.RDD
@@ -44,7 +45,27 @@ class GraphOptimizer[T: ClassTag]
 
   override def optimize(): Module[T] = {
     val sc = _dataset.originRDD().sparkContext
-    val dataRDD = _dataset.originRDD()
+    var dataRDD = _dataset.data(train = true)
+
+    val driverState = T(
+      "epoch" -> optimMethods.values.head.state("epoch"),
+      "neval" -> optimMethods.values.head.state("neval")
+    )
+
+    val broadcast = sc.broadcast((model, criterion))
+
+    while (!endWhen(driverState)) {
+      dataRDD.foreachPartition(data => {
+        val batch = data.next()
+
+        val (localModel, localCriterion) = broadcast.value
+        val input = batch.getInput()
+        val target = batch.getTarget()
+        val output = localModel.forward(input)
+        val loss = localCriterion.forward(output, target)
+        val errors = localCriterion.backward(output, target)
+      })
+    }
 
     null
   }
