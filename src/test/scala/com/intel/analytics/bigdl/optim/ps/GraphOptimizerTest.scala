@@ -2,9 +2,9 @@ package com.intel.analytics.bigdl.optim.ps
 
 import com.intel.analytics.bigdl.dataset.Sample
 import com.intel.analytics.bigdl.nn.{Linear, MSECriterion, Sequential}
+import com.intel.analytics.bigdl.optim.{Optimizer, Trigger}
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.utils.Engine
-import com.tencent.angel.ml.core.optimizer.SGD
 import org.apache.spark.{SparkConf, SparkContext}
 import org.junit.{Assert, Test}
 
@@ -18,8 +18,8 @@ class GraphOptimizerTest extends Assert {
     val sc = new SparkContext(sparkConf)
     Engine.init
 
-    val samples = (0 until 1000).map(i => {
-      val feature = Tensor[Float](20).zero()
+    val samples = (0 until 10000).map(i => {
+      val feature = Tensor[Float](15).zero()
       val label = Tensor[Float](1).zero()
 
       Sample(feature, label)
@@ -28,13 +28,13 @@ class GraphOptimizerTest extends Assert {
     val sampleRDD = sc.parallelize(samples, 2)
 
     val model = Sequential[Float]()
-    model.add(Linear[Float](20, 10))
+    model.add(Linear[Float](15, 10))
     model.add(Linear[Float](10, 1))
 
     val criterion = new MSECriterion[Float]()
-    val optimizer = new SGD(0.01)
+//    val optimizer = new SGD(0.01)
 
-    val graphOptimizer = GraphOptimizer[Float](model, sampleRDD, criterion, optimizer, 100)
-    graphOptimizer.optimize()
+    val graphOptimizer = Optimizer(model, sampleRDD, criterion, 500)
+    graphOptimizer.setEndWhen(Trigger.maxEpoch(1)).optimize()
   }
 }

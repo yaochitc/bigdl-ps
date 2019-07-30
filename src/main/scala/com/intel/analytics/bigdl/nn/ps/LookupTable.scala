@@ -21,14 +21,13 @@ import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
 class LookupTable[T: ClassTag]
-(name: String, val nIndex: Int, val nOutput: Int,
+(val name: String, val nIndex: Int, val nOutput: Int,
  val paddingValue: Double = 0,
  val maxNorm: Double = Double.MaxValue,
  val normType: Double = 2.0,
  shouldScaleGradByFreq: Boolean = false,
  var wRegularizer: Regularizer[T] = null,
- val maskZero: Boolean = false
-)
+ val maskZero: Boolean = false)
 (implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]) extends PSTensorModule[T] with Initializable {
 
   private val embedMatCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_embedding", 2 * nOutput, nIndex,
