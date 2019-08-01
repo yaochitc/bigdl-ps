@@ -15,12 +15,9 @@ class LookupTableTest extends Assert {
     val lookupTable = new LookupTable[Float]("lookupTable", 10, 10)
     val input = Tensor[Float](1, 1)
     input.setValue(1, 1, 1)
-    lookupTable.pullParameters(input)
     lookupTable.forward(input)
 
     val gradOutput = Tensor[Float](2, 1, 10).zero()
     lookupTable.backward(input, gradOutput)
-
-    lookupTable.pushGradient()
   }
 }

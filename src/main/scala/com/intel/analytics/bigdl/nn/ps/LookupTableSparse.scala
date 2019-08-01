@@ -1,9 +1,7 @@
 package com.intel.analytics.bigdl.nn.ps
 
-import java.util.concurrent.Future
-
 import com.intel.analytics.bigdl.nn.abstractnn.{Activity, Initializable}
-import com.intel.analytics.bigdl.optim.Regularizer
+import com.intel.analytics.bigdl.nn.ps.abstractnn.PSAbstractModule
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.intel.analytics.bigdl.tensor.ps.PSSparseRowTensor
 import com.intel.analytics.bigdl.tensor.{SparseType, Tensor}
@@ -11,7 +9,6 @@ import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.optimizer.Optimizer
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.math2.VFactory
-import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
 import com.tencent.angel.ml.psf.columns.{UpdateColsFunc, UpdateColsParam}
 import com.tencent.angel.psagent.PSAgentContext
 
@@ -22,8 +19,7 @@ import scala.reflect.ClassTag
 class LookupTableSparse[T: ClassTag]
 (val name: String, val nIndex: Int, val nOutput: Int,
  val combiner: String = "sum",
- val maxNorm: Double = -1,
- var wRegularizer: Regularizer[T] = null)
+ val maxNorm: Double = -1)
 (implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]) extends PSAbstractModule[Activity, Tensor[T], T] with Initializable {
 
   private val embedMatCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_embedding", 2 * nOutput, nIndex,
@@ -52,6 +48,8 @@ class LookupTableSparse[T: ClassTag]
     }
     require(inputTensor.getTensorType == SparseType, "LookupTableSparse's input" +
       s"must be SparseTensor, but got ${inputTensor.getTensorType}")
+
+    pullParameters(inputTensor)
 
     val batchSize = inputTensor.size(1)
     inputBuffer.set(inputTensor.storage(),
@@ -172,12 +170,10 @@ class LookupTableSparse[T: ClassTag]
       b += 1
     }
 
-    if (null != wRegularizer) {
-      wRegularizer.accRegularization(weight, gradWeight, scaleW)
-    }
+    pushGradient()
   }
 
-  override def pullParameters(input: Tensor[T]): Unit = {
+  def pullParameters(input: Tensor[T]): Unit = {
     inputBuffer.set(input.storage(),
       input.storageOffset(),
       Array(input.nElement()))
@@ -199,7 +195,7 @@ class LookupTableSparse[T: ClassTag]
     weight = psEv.getRowAsSparseMatrix(matrixId, nIndex, rows, indices)
   }
 
-  override def pushGradient(): Unit = {
+  def pushGradient(): Unit = {
     val rowNums = (nOutput until 2 * nOutput).toArray
     val indices = VFactory.denseLongVector(gradWeight.getVectors.keys.toArray)
     val vectors = gradWeight.getVectors.map { case (key, vector) => (long2Long(key), vector) }.asJava
@@ -209,7 +205,7 @@ class LookupTableSparse[T: ClassTag]
     PSAgentContext.get().getUserRequestAdapter.update(func).get()
   }
 
-  override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Future[VoidResult] = {
+  override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {
     optimizer.update(matrixId, nIndex, epoch, batchSize)
   }
 }

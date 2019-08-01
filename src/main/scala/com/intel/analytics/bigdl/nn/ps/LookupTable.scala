@@ -1,11 +1,9 @@
 package com.intel.analytics.bigdl.nn.ps
 
-import java.util.concurrent.Future
-
 import breeze.numerics.{abs, pow}
 import com.intel.analytics.bigdl.nn.ErrorInfo
 import com.intel.analytics.bigdl.nn.abstractnn.Initializable
-import com.intel.analytics.bigdl.optim.Regularizer
+import com.intel.analytics.bigdl.nn.ps.abstractnn.PSTensorModule
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.intel.analytics.bigdl.tensor.ps.PSSparseRowTensor
@@ -13,7 +11,6 @@ import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.optimizer.Optimizer
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.math2.VFactory
-import com.tencent.angel.ml.matrix.psf.update.base.VoidResult
 import com.tencent.angel.ml.psf.columns.{UpdateColsFunc, UpdateColsParam}
 import com.tencent.angel.psagent.PSAgentContext
 
@@ -26,7 +23,6 @@ class LookupTable[T: ClassTag]
  val maxNorm: Double = Double.MaxValue,
  val normType: Double = 2.0,
  shouldScaleGradByFreq: Boolean = false,
- var wRegularizer: Regularizer[T] = null,
  val maskZero: Boolean = false)
 (implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]) extends PSTensorModule[T] with Initializable {
 
@@ -141,6 +137,8 @@ class LookupTable[T: ClassTag]
   }
 
   override def updateOutput(input: Tensor[T]): Tensor[T] = {
+    pullParameters(input)
+
     if (maskZero && paddingValue != 0) {
       weight.select(1, paddingValue.toInt).zero()
     }
@@ -215,11 +213,9 @@ class LookupTable[T: ClassTag]
         }).toMap
 
       gradWeight = PSSparseRowTensor(map, nIndex, nOutput)
-
-      if (null != wRegularizer) {
-        wRegularizer.accRegularization(weight, gradWeight, scaleW)
-      }
     }
+
+    pushGradient()
   }
 
   override def clearState(): this.type = {
@@ -230,7 +226,7 @@ class LookupTable[T: ClassTag]
     this
   }
 
-  override def pullParameters(input: Tensor[T]): Unit = {
+  def pullParameters(input: Tensor[T]): Unit = {
     inputBuffer = input.contiguous()
     require(inputBuffer.dim() == 1 || inputBuffer.dim() == 2,
       s"LookupTable: input must be a vector or matrix, input dim ${inputBuffer.dim()}")
@@ -256,7 +252,7 @@ class LookupTable[T: ClassTag]
     weight = psEv.getRowAsSparseMatrix(matrixId, nIndex, rows, indices)
   }
 
-  override def pushGradient(): Unit = {
+  def pushGradient(): Unit = {
     val rowNums = (nOutput until 2 * nOutput).toArray
     val indices = VFactory.denseLongVector(gradWeight.getVectors.keys.toArray)
     val vectors = gradWeight.getVectors.map { case (key, vector) => (long2Long(key), vector) }.asJava
@@ -266,7 +262,7 @@ class LookupTable[T: ClassTag]
     PSAgentContext.get().getUserRequestAdapter.update(func).get()
   }
 
-  override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Future[VoidResult] = {
+  override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {
     optimizer.update(matrixId, nIndex, epoch, batchSize)
   }
 }
