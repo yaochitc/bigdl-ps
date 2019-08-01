@@ -15,10 +15,12 @@ class Linear[T: ClassTag]
  inputSize: Int,
  outputSize: Int,
  withBias: Boolean = true,
+ initWeight: Tensor[T] = null,
+ initBias: Tensor[T] = null,
  initGradWeight: Tensor[T] = null,
  initGradBias: Tensor[T] = null
 )(implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T])
-  extends com.intel.analytics.bigdl.nn.Linear[T](inputSize, outputSize, withBias, null, null, initGradWeight, initGradBias)
+  extends com.intel.analytics.bigdl.nn.Linear[T](inputSize, outputSize, withBias, null, null, initWeight, initBias, initGradWeight, initGradBias)
     with ParameterSupport[T] with Initializable {
   private val weightCtx =
     PSMatrixUtils.createPSMatrixCtx(s"${name}_weight", 2, inputSize * outputSize, PSUtils.getRowType(ev.getType()))
@@ -60,5 +62,22 @@ class Linear[T: ClassTag]
   override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {
     optimizer.update(weightId, 1, epoch, batchSize)
     optimizer.update(biasId, 1, epoch, batchSize)
+  }
+}
+
+object Linear {
+  def apply[@specialized(Float, Double) T: ClassTag]
+  (
+    name: String,
+    inputSize: Int,
+    outputSize: Int,
+    withBias: Boolean = true,
+    initWeight: Tensor[T] = null,
+    initBias: Tensor[T] = null,
+    initGradWeight: Tensor[T] = null,
+    initGradBias: Tensor[T] = null
+  )(implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]): Linear[T] = {
+    new Linear[T](name, inputSize, outputSize,
+      withBias, initWeight, initBias, initGradWeight, initGradBias)
   }
 }

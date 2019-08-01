@@ -1,5 +1,6 @@
 package com.intel.analytics.bigdl.nn.ps
 
+import com.intel.analytics.bigdl.nn.Sequential
 import com.intel.analytics.bigdl.nn.ps.abstractnn.ParameterSupport
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.tencent.angel.ml.core.optimizer.Optimizer
@@ -19,5 +20,11 @@ class Sequential[T: ClassTag]
 
       i += 1
     }
+  }
+}
+
+object Sequential {
+  def apply[@specialized(Float, Double) T: ClassTag]()(implicit ev: TensorNumeric[T]): Sequential[T] = {
+    new Sequential[T]()
   }
 }
