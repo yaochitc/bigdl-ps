@@ -65,6 +65,7 @@ class GraphOptimizer[T: ClassTag]
 
     val numSamples = distDataset.data(train = false).map(_.size()).reduce(_ + _)
 
+    model.asInstanceOf[ParameterSupport[T]].init()
     val broadcast = sc.broadcast((model, criterion, _optimizer))
 
     while (!endWhen(driverState)) {

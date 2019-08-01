@@ -8,6 +8,8 @@ import com.tencent.angel.ml.core.optimizer.Optimizer
 import scala.reflect.ClassTag
 
 trait ParameterSupport[T] {
+  def init(): Unit
+
   def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit
 }
 

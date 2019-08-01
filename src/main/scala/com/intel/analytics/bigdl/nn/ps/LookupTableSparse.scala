@@ -9,6 +9,7 @@ import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.optimizer.Optimizer
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.math2.VFactory
+import com.tencent.angel.ml.matrix.psf.update.RandomNormal
 import com.tencent.angel.ml.psf.columns.{UpdateColsFunc, UpdateColsParam}
 import com.tencent.angel.psagent.PSAgentContext
 
@@ -39,6 +40,12 @@ class LookupTableSparse[T: ClassTag]
   protected val batchScaleBuffer: Tensor[T] = Tensor[T]()
   protected var nonZeroCount: Array[Int] = _
   protected val normScale: mutable.HashMap[Int, T] = mutable.HashMap[Int, T]()
+
+  override def init(): Unit = {
+    val bound: Double = 0.00001
+    val randFunc = new RandomNormal(matrixId, 0, nIndex, 0.0, bound)
+    PSAgentContext.get().getUserRequestAdapter.update(randFunc).get()
+  }
 
   override def updateOutput(input: Activity): Tensor[T] = {
     val (inputTensor, weightTensor) = if (input.isTable) {

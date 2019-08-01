@@ -11,6 +11,7 @@ import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.optimizer.Optimizer
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.math2.VFactory
+import com.tencent.angel.ml.matrix.psf.update.RandomNormal
 import com.tencent.angel.ml.psf.columns.{UpdateColsFunc, UpdateColsParam}
 import com.tencent.angel.psagent.PSAgentContext
 
@@ -38,6 +39,12 @@ class LookupTable[T: ClassTag]
   private var inputBuffer = Tensor[T]()
   private var normBuffer = Tensor[T]()
   private val countBuffer = Tensor[T]()
+
+  override def init(): Unit = {
+    val bound: Double = 0.00001
+    val randFunc = new RandomNormal(matrixId, 0, nIndex, 0.0, bound)
+    PSAgentContext.get().getUserRequestAdapter.update(randFunc).get()
+  }
 
   private def renorm(input: Tensor[T]): Unit = {
     if (Double.MaxValue == maxNorm) {
@@ -267,4 +274,5 @@ class LookupTable[T: ClassTag]
   override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {
     optimizer.update(matrixId, nIndex, epoch, batchSize)
   }
+
 }

@@ -35,6 +35,13 @@ class Linear[T: ClassTag]
   lazy val weightId: Int = PSMatrixUtils.getMatrixId(s"${name}_weight")
   lazy val biasId: Int = PSMatrixUtils.getMatrixId(s"${name}_bias")
 
+  override def init(): Unit = {
+    psEv.incrementRowByMatrix(weightId, 0, weight)
+    if (withBias) {
+      psEv.incrementRowByMatrix(biasId, 0, bias)
+    }
+  }
+
   override def updateOutput(input: Tensor[T]): Tensor[T] = {
     pullParameters(input)
     super.updateOutput(input)
