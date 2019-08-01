@@ -1,8 +1,8 @@
 package com.intel.analytics.bigdl.optim.ps
 
 import com.intel.analytics.bigdl.dataset.Sample
-import com.intel.analytics.bigdl.nn.{BCECriterion, CrossEntropyCriterion, MSECriterion, SoftMax}
 import com.intel.analytics.bigdl.nn.ps.{Linear, Sequential}
+import com.intel.analytics.bigdl.nn.{CrossEntropyCriterion, SoftMax}
 import com.intel.analytics.bigdl.optim.Trigger
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.utils.Engine
@@ -40,9 +40,9 @@ class GraphOptimizerTest extends Assert {
     model.add(SoftMax[Float]())
 
     val criterion = new CrossEntropyCriterion[Float]()
-    val optimizer = new SGD(0.5)
+    val optimizer = new SGD(0.02)
 
-    val opt = GraphOptimizer[Float](model, sampleRDD, criterion, optimizer, 150).setEndWhen(Trigger.maxEpoch(2000))
+    val opt = GraphOptimizer[Float](model, sampleRDD, criterion, optimizer, 150).setEndWhen(Trigger.maxEpoch(5000))
     val trainedModel = opt.optimize()
   }
 }
