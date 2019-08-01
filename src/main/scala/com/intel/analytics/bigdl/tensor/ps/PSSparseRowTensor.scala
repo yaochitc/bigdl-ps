@@ -58,7 +58,9 @@ class PSSparseRowTensor[@specialized(Float, Double) T: ClassTag]
 
   override def t(): Tensor[T] = ???
 
-  override def apply(index: Int): Tensor[T] = ???
+  override def apply(index: Int): Tensor[T] = {
+    psEv.vector2Tensor(_vectors(index - 1))
+  }
 
   override def apply(indexes: Array[Int]): T = ???
 

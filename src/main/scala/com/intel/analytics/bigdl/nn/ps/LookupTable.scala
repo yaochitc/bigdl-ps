@@ -213,9 +213,9 @@ class LookupTable[T: ClassTag]
         }).toMap
 
       gradWeight = PSSparseRowTensor(map, nIndex, nOutput)
-    }
 
-    pushGradient()
+      pushGradient()
+    }
   }
 
   override def clearState(): this.type = {
@@ -260,6 +260,8 @@ class LookupTable[T: ClassTag]
     val param = new UpdateColsParam(matrixId, rowNums, indices, vectors)
     val func = new UpdateColsFunc(param)
     PSAgentContext.get().getUserRequestAdapter.update(func).get()
+
+    gradWeight = null
   }
 
   override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {

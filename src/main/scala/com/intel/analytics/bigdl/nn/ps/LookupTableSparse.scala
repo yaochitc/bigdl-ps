@@ -137,12 +137,13 @@ class LookupTableSparse[T: ClassTag]
 
     var b = 0
     var i = 0
+    val map = mutable.Map[Int, Tensor[T]]()
     while (b < batchSize) {
       val times = nonZeroCount(b)
       var j = 0
       while (j < times) {
         val index = ev.toType[Int](inputBuffer.valueAt(i + 1))
-        val gradWeightFrame = gradWeight.select(1, index)
+
         val gradOutputFrame = gradOutput.select(1, b + 1)
         // scale = normScale * batchScale * sp_weights
         val scale = ev.times(
@@ -150,6 +151,7 @@ class LookupTableSparse[T: ClassTag]
           ev.times(batchScaleBuffer.valueAt(b + 1),
             if (!inputWeightBuffer.isEmpty) inputWeightBuffer.valueAt(i + 1) else ev.one))
         // gradWeight += gradOutput * scale
+        val gradWeightFrame = map.getOrElse(index, Tensor().resize(gradOutputFrame.size()).zero())
         gradWeightFrame.add(scale, gradOutputFrame)
 
         // if norm2 clipping is invoked, need to compute the clipping's gradient.
@@ -164,11 +166,22 @@ class LookupTableSparse[T: ClassTag]
             ev.pow(ev.divide(normScale(index), ev.fromType(maxNorm)), three))),
             weight.select(1, index))
         }
+
+        map(index) = gradWeightFrame
         i += 1
         j += 1
       }
       b += 1
     }
+
+    val vectors = map.map { case (index, tensor) => {
+      val array = tensor.storage().array()
+      val zeroBaseIndex = index - 1
+      (zeroBaseIndex.toLong, psEv.array2Vector(array, 0, array.length))
+    }
+    }.toMap
+
+    gradWeight = PSSparseRowTensor(vectors, nIndex, nOutput)
 
     pushGradient()
   }
@@ -185,7 +198,7 @@ class LookupTableSparse[T: ClassTag]
     var i = 0
     while (i < numEle) {
       require(ev.isGreaterEq(input_data(i + input_offset), ev.one),
-        "LookupTable: elements of input should be greater than or equal to 1")
+        "LookupTableSparse: elements of input should be greater than or equal to 1")
       i += 1
     }
 
@@ -203,6 +216,8 @@ class LookupTableSparse[T: ClassTag]
     val param = new UpdateColsParam(matrixId, rowNums, indices, vectors)
     val func = new UpdateColsFunc(param)
     PSAgentContext.get().getUserRequestAdapter.update(func).get()
+
+    gradWeight = null
   }
 
   override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {
