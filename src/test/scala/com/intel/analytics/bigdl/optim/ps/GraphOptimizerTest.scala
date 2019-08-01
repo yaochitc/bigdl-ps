@@ -1,11 +1,11 @@
 package com.intel.analytics.bigdl.optim.ps
 
 import com.intel.analytics.bigdl.dataset.Sample
-import com.intel.analytics.bigdl.nn.MSECriterion
+import com.intel.analytics.bigdl.nn.{BCECriterion, CrossEntropyCriterion, MSECriterion, SoftMax}
 import com.intel.analytics.bigdl.nn.ps.{Linear, Sequential}
-import com.intel.analytics.bigdl.optim.{Optimizer, Trigger}
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.utils.Engine
+import com.tencent.angel.ml.core.optimizer.SGD
 import com.tencent.angel.spark.context.PSContext
 import org.apache.spark.{SparkConf, SparkContext}
 import org.junit.{Assert, Test}
@@ -21,23 +21,27 @@ class GraphOptimizerTest extends Assert {
     PSContext.getOrCreate(sc)
     Engine.init
 
-    val samples = (0 until 10000).map(i => {
-      val feature = Tensor[Float](15).zero()
-      val label = Tensor[Float](1).zero()
-
-      Sample(feature, label)
+    val sampleRDD = sc.textFile("data/iris.data", 1).filter(!"".equals(_)).map(line => {
+      val subs = line.split(",") // "," may exist in content.
+      val feature = Tensor(subs.slice(0, 4).map(_.toFloat), Array(4))
+      val getLabel: String => Float = {
+        case "Iris-setosa" => 1.0f
+        case "Iris-versicolor" => 2.0f
+        case "Iris-virginica" => 3.0f
+      }
+      Sample[Float](feature, Tensor(Array(getLabel(subs(4))), Array(1)))
     })
 
-    val sampleRDD = sc.parallelize(samples, 2)
-
     val model = Sequential[Float]()
-    model.add(Linear[Float]("firstLayer", 15, 10))
-    model.add(Linear[Float]("secondLayer", 10, 1))
+    model.add(Linear[Float]("firstLayer", 4, 40))
+    model.add(Linear[Float]("secondLayer", 40, 20))
+    model.add(Linear[Float]("thirdLayer", 20, 3))
+    model.add(SoftMax[Float]())
 
-    val criterion = new MSECriterion[Float]()
-//    val optimizer = new SGD(0.01)
+    val criterion = new CrossEntropyCriterion[Float]()
+    val optimizer = new SGD(0.01)
 
-    val graphOptimizer = Optimizer(model, sampleRDD, criterion, 500)
-    graphOptimizer.setEndWhen(Trigger.maxEpoch(1)).optimize()
+    val opt = GraphOptimizer[Float](model, sampleRDD, criterion, optimizer, 150)
+    val trainedModel = opt.optimize()
   }
 }

@@ -1,6 +1,5 @@
 package com.intel.analytics.bigdl.nn.ps
 
-import com.intel.analytics.bigdl.nn.Sequential
 import com.intel.analytics.bigdl.nn.ps.abstractnn.ParameterSupport
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.tencent.angel.ml.core.optimizer.Optimizer

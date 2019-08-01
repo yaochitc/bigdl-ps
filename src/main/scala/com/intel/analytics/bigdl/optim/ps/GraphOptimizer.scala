@@ -1,6 +1,8 @@
 package com.intel.analytics.bigdl.optim.ps
 
 import com.intel.analytics.bigdl.dataset._
+import com.intel.analytics.bigdl.nn.ps.abstractnn.ParameterSupport
+import com.intel.analytics.bigdl.optim.DistriOptimizer.logger
 import com.intel.analytics.bigdl.optim.Optimizer
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.intel.analytics.bigdl.utils.T
@@ -21,8 +23,8 @@ object GraphOptimizer {
    labelPaddingParam: PaddingParam[T] = null
   )(implicit ev: TensorNumeric[T]): Optimizer[T, MiniBatch[T]] = {
 
-    val _featurePaddingParam = if (featurePaddingParam != null) Some(featurePaddingParam) else None
-    val _labelPaddingParam = if (labelPaddingParam != null) Some(labelPaddingParam) else None
+    val _featurePaddingParam = Option(featurePaddingParam)
+    val _labelPaddingParam = Option(labelPaddingParam)
 
     new GraphOptimizer[T](
       _model = model,
@@ -44,29 +46,60 @@ class GraphOptimizer[T: ClassTag]
   _model, _dataset, _criterion) {
 
   override def optimize(): Module[T] = {
-    val sc = _dataset.originRDD().sparkContext
-    var dataRDD = _dataset.data(train = true)
+    val distDataset = dataset.asInstanceOf[DistributedDataSet[MiniBatch[T]]]
+
+    val sc = distDataset.originRDD().sparkContext
+    var dataRDD = distDataset.data(train = true)
 
     val driverState = T(
       "epoch" -> optimMethods.values.head.state("epoch"),
       "neval" -> optimMethods.values.head.state("neval")
     )
 
-    val broadcast = sc.broadcast((model, criterion))
+    var recordsProcessedThisEpoch = 0
+    val shuffleBefore = System.nanoTime()
+    logger.info("Shuffle data")
+    distDataset.shuffle()
+    val shuffleEnd = System.nanoTime()
+    logger.info(s"Shuffle data complete. Takes ${(shuffleEnd - shuffleBefore) / 1e9}s")
+
+    val numSamples = distDataset.data(train = false).map(_.size()).reduce(_ + _)
+
+    val broadcast = sc.broadcast((model, criterion, _optimizer))
 
     while (!endWhen(driverState)) {
+      val recordsNum = sc.accumulator(0, "record number")
+
       dataRDD.foreachPartition(data => {
         val batch = data.next()
 
-        val (localModel, localCriterion) = broadcast.value
+        val (localModel, localCriterion, localOptimizer) = broadcast.value
         val input = batch.getInput()
         val target = batch.getTarget()
         val output = localModel.forward(input)
         val loss = localCriterion.forward(output, target)
         val errors = localCriterion.backward(output, target)
+        localModel.backward(input, errors)
+
+        val batchSize = batch.size()
+        val epoch = driverState[Int]("epoch")
+        localModel.asInstanceOf[ParameterSupport[T]].update(localOptimizer, epoch, batchSize)
+
+        recordsNum += batchSize
       })
+
+      recordsProcessedThisEpoch += recordsNum.value
+
+      driverState("neval") = driverState[Int]("neval") + 1
+      if (recordsProcessedThisEpoch >= numSamples) {
+        // Epoch is finished
+        driverState("epoch") = driverState[Int]("epoch") + 1
+        distDataset.shuffle()
+        dataRDD = distDataset.data(train = true)
+        recordsProcessedThisEpoch = 0
+      }
     }
 
-    null
+    model
   }
 }

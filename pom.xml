@@ -23,13 +23,23 @@
         </dependency>
         <dependency>
             <groupId>com.tencent.angel</groupId>
-            <artifactId>spark-on-angel-mllib</artifactId>
+            <artifactId>spark-on-angel-core</artifactId>
             <version>2.2.0</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-mllib_2.11</artifactId>
-            <version>${spark.version}</version>
+            <groupId>com.tencent.angel</groupId>
+            <artifactId>angel-ps-mllib</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-common</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-mapreduce-client-core</artifactId>
+                </exclusion>
+            </exclusions>
+            <version>2.2.0</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
