@@ -70,8 +70,11 @@ class Linear[T: ClassTag]
   }
 
   override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {
-    optimizer.update(weightId, 1, epoch, batchSize)
-    optimizer.update(biasId, 1, epoch, batchSize)
+    optimizer.update(weightId, 1, epoch, batchSize).get()
+
+    if (withBias) {
+      optimizer.update(biasId, 1, epoch, batchSize).get()
+    }
   }
 }
 

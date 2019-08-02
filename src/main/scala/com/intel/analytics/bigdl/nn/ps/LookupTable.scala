@@ -41,8 +41,8 @@ class LookupTable[T: ClassTag]
   private val countBuffer = Tensor[T]()
 
   override def init(): Unit = {
-    val bound: Double = 0.00001
-    val randFunc = new RandomNormal(matrixId, 0, nIndex, 0.0, bound)
+    val bound: Double = 1.0
+    val randFunc = new RandomNormal(matrixId, 0, nOutput, 0.0, bound)
     PSAgentContext.get().getUserRequestAdapter.update(randFunc).get()
   }
 
@@ -254,14 +254,17 @@ class LookupTable[T: ClassTag]
     }
 
     val rows = (0 until nOutput).toArray
-    val indices = (0 until numEle).map(i => ev.toType[Long](input_data(i + input_offset)) - 1).toArray
+    val indices = (0 until numEle).map(i => ev.toType[Long](input_data(i + input_offset)) - 1)
+      .distinct
+      .toArray
+      .sorted
 
     weight = psEv.getRowAsSparseMatrix(matrixId, nIndex, rows, indices)
   }
 
   def pushGradient(): Unit = {
     val rowNums = (nOutput until 2 * nOutput).toArray
-    val indices = VFactory.denseLongVector(gradWeight.getVectors.keys.toArray)
+    val indices = VFactory.denseLongVector(gradWeight.getVectors.keys.toArray.sorted)
     val vectors = gradWeight.getVectors.map { case (key, vector) => (long2Long(key), vector) }.asJava
 
     val param = new UpdateColsParam(matrixId, rowNums, indices, vectors)
@@ -272,7 +275,24 @@ class LookupTable[T: ClassTag]
   }
 
   override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {
-    optimizer.update(matrixId, nIndex, epoch, batchSize)
+    optimizer.update(matrixId, nOutput, epoch, batchSize).get()
   }
+}
 
+
+object LookupTable {
+  def apply[@specialized(Float, Double) T: ClassTag]
+  (
+    name: String,
+    nIndex: Int,
+    nOutput: Int,
+    paddingValue: Double = 0,
+    maxNorm: Double = Double.MaxValue,
+    normType: Double = 2.0,
+    shouldScaleGradByFreq: Boolean = false,
+    maskZero: Boolean = false
+  )
+  (implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]): LookupTable[T] =
+    new LookupTable[T](name, nIndex, nOutput, paddingValue,
+      maxNorm, normType, shouldScaleGradByFreq, maskZero)
 }
