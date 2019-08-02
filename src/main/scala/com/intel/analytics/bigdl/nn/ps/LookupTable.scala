@@ -19,7 +19,8 @@ import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
 class LookupTable[T: ClassTag]
-(val name: String, val nIndex: Int, val nOutput: Int,
+(val name: String, val numSlot: Int,
+ val nIndex: Int, val nOutput: Int,
  val paddingValue: Double = 0,
  val maxNorm: Double = Double.MaxValue,
  val normType: Double = 2.0,
@@ -27,7 +28,7 @@ class LookupTable[T: ClassTag]
  val maskZero: Boolean = false)
 (implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]) extends PSTensorModule[T] with Initializable {
 
-  private val embedMatCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_embedding", 2 * nOutput, nIndex,
+  private val embedMatCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_embedding", (1 + numSlot) * nOutput, nIndex,
     PSUtils.getRowType(ev.getType()))
   PSMatrixUtils.createPSMatrix(embedMatCtx)
 
@@ -284,6 +285,7 @@ object LookupTable {
   def apply[@specialized(Float, Double) T: ClassTag]
   (
     name: String,
+    numSlot: Int,
     nIndex: Int,
     nOutput: Int,
     paddingValue: Double = 0,
@@ -293,6 +295,6 @@ object LookupTable {
     maskZero: Boolean = false
   )
   (implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]): LookupTable[T] =
-    new LookupTable[T](name, nIndex, nOutput, paddingValue,
+    new LookupTable[T](name, numSlot, nIndex, nOutput, paddingValue,
       maxNorm, normType, shouldScaleGradByFreq, maskZero)
 }

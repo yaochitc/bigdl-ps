@@ -6,14 +6,20 @@ import com.intel.analytics.bigdl.nn.{CrossEntropyCriterion, SoftMax}
 import com.intel.analytics.bigdl.optim.Trigger
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.utils.Engine
-import com.tencent.angel.ml.core.optimizer.SGD
+import com.tencent.angel.ml.core.optimizer.{Adam, SGD}
 import com.tencent.angel.spark.context.PSContext
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.junit.{Assert, Test}
 
 class GraphOptimizerTest extends Assert {
   @Test
   def testOptimize(): Unit = {
+    Logger.getLogger("org").setLevel(Level.ERROR)
+    Logger.getLogger("akka").setLevel(Level.ERROR)
+    Logger.getLogger("breeze").setLevel(Level.ERROR)
+    Logger.getLogger("com.intel.analytics.bigdl.optim").setLevel(Level.INFO)
+
     System.setProperty("bigdl.localMode", "true")
     val sparkConf = new SparkConf()
       .setAppName("linear")
@@ -34,13 +40,13 @@ class GraphOptimizerTest extends Assert {
     })
 
     val model = Sequential[Float]()
-    model.add(Linear[Float]("firstLayer", 4, 40))
-    model.add(Linear[Float]("secondLayer", 40, 20))
-    model.add(Linear[Float]("thirdLayer", 20, 3))
+    model.add(Linear[Float]("firstLayer", 3, 4, 40))
+    model.add(Linear[Float]("secondLayer", 3, 40, 20))
+    model.add(Linear[Float]("thirdLayer", 3, 20, 3))
     model.add(SoftMax[Float]())
 
     val criterion = new CrossEntropyCriterion[Float]()
-    val optimizer = new SGD(0.02)
+    val optimizer = new Adam(1.0, 0.99, 0.9)
 
     val opt = GraphOptimizer[Float](model, sampleRDD, criterion, optimizer, 150).setEndWhen(Trigger.maxEpoch(5000))
     val trainedModel = opt.optimize()

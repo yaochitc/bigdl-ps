@@ -18,12 +18,13 @@ import scala.collection.mutable
 import scala.reflect.ClassTag
 
 class LookupTableSparse[T: ClassTag]
-(val name: String, val nIndex: Int, val nOutput: Int,
+(val name: String, val numSlot: Int,
+ val nIndex: Int, val nOutput: Int,
  val combiner: String = "sum",
  val maxNorm: Double = -1)
 (implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]) extends PSAbstractModule[Activity, Tensor[T], T] with Initializable {
 
-  private val embedMatCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_embedding", 2 * nOutput, nIndex,
+  private val embedMatCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_embedding", (1 + numSlot) * nOutput, nIndex,
     PSUtils.getRowType(ev.getType()))
   PSMatrixUtils.createPSMatrix(embedMatCtx)
 

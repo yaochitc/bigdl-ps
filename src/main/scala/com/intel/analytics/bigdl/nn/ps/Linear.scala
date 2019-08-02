@@ -12,6 +12,7 @@ import scala.reflect.ClassTag
 
 class Linear[T: ClassTag]
 (name: String,
+ numSlot: Int,
  inputSize: Int,
  outputSize: Int,
  withBias: Boolean = true,
@@ -23,11 +24,11 @@ class Linear[T: ClassTag]
   extends com.intel.analytics.bigdl.nn.Linear[T](inputSize, outputSize, withBias, null, null, initWeight, initBias, initGradWeight, initGradBias)
     with ParameterSupport[T] with Initializable {
   private val weightCtx =
-    PSMatrixUtils.createPSMatrixCtx(s"${name}_weight", 2, inputSize * outputSize, PSUtils.getRowType(ev.getType()))
+    PSMatrixUtils.createPSMatrixCtx(s"${name}_weight", 1 + numSlot, inputSize * outputSize, PSUtils.getRowType(ev.getType()))
   PSMatrixUtils.createPSMatrix(weightCtx)
 
   private val biasCtx = if (withBias) {
-    val biasCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_bias", 2, outputSize, PSUtils.getRowType(ev.getType()))
+    val biasCtx = PSMatrixUtils.createPSMatrixCtx(s"${name}_bias", 1 + numSlot, outputSize, PSUtils.getRowType(ev.getType()))
     PSMatrixUtils.createPSMatrix(biasCtx)
     biasCtx
   } else null
@@ -82,6 +83,7 @@ object Linear {
   def apply[@specialized(Float, Double) T: ClassTag]
   (
     name: String,
+    numSlot: Int,
     inputSize: Int,
     outputSize: Int,
     withBias: Boolean = true,
@@ -90,7 +92,7 @@ object Linear {
     initGradWeight: Tensor[T] = null,
     initGradBias: Tensor[T] = null
   )(implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T]): Linear[T] = {
-    new Linear[T](name, inputSize, outputSize,
+    new Linear[T](name, numSlot, inputSize, outputSize,
       withBias, initWeight, initBias, initGradWeight, initGradBias)
   }
 }

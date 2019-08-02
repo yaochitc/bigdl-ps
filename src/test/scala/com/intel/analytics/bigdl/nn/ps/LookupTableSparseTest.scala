@@ -12,7 +12,7 @@ class LookupTableSparseTest extends Assert {
       .setAppName("linear")
       .setMaster("local")
     PSContext.getOrCreate(new SparkContext(sparkConf))
-    val lookupTableSparse = new LookupTableSparse[Float]("lookupTableSparse", 10, 10, maxNorm = 0.1)
+    val lookupTableSparse = new LookupTableSparse[Float]("lookupTableSparse", 1, 10, 10, maxNorm = 0.1)
     val input = Tensor.sparse(Tensor[Float](1, 1).setValue(1, 1, 1))
     lookupTableSparse.pullParameters(input)
     lookupTableSparse.forward(input)
