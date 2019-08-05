@@ -22,6 +22,8 @@ trait PSTensorNumeric[@specialized(Float, Double) T] extends Serializable {
 
   def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[T]): Unit
 
+  def zeroVector(dim: Int): Vector
+
   def array2Vector(array: Array[T], offset: Int, length: Int): Vector
 
   def vector2Tensor(vector: Vector): Tensor[T]
@@ -59,6 +61,8 @@ object PSTensorNumeric {
     override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Float]): Unit = {
       incrementRow(matrixId, rowId, mat)
     }
+
+    override def zeroVector(dim: Int): Vector = VFactory.denseFloatVector(dim)
 
     override def array2Vector(array: Array[Float], offset: Int, length: Int): Vector = {
       val vec = Array.ofDim[Float](length)
@@ -102,6 +106,8 @@ object PSTensorNumeric {
     override def incrementRowByMatrix(matrixId: Int, rowId: Int, mat: Tensor[Double]): Unit = {
       incrementRow(matrixId, rowId, mat)
     }
+
+    override def zeroVector(dim: Int): Vector = VFactory.denseFloatVector(dim)
 
     override def array2Vector(array: Array[Double], offset: Int, length: Int): Vector = {
       val vec = Array.ofDim[Double](length)

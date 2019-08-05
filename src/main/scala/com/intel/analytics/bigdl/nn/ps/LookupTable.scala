@@ -11,11 +11,13 @@ import com.intel.analytics.bigdl.utils.ps.{PSTensorNumeric, PSUtils}
 import com.tencent.angel.ml.core.optimizer.Optimizer
 import com.tencent.angel.ml.core.utils.PSMatrixUtils
 import com.tencent.angel.ml.math2.VFactory
+import com.tencent.angel.ml.math2.vector.Vector
 import com.tencent.angel.ml.matrix.psf.update.RandomNormal
 import com.tencent.angel.ml.psf.columns.{UpdateColsFunc, UpdateColsParam}
 import com.tencent.angel.psagent.PSAgentContext
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.reflect.ClassTag
 
 class LookupTable[T: ClassTag]
@@ -211,16 +213,21 @@ class LookupTable[T: ClassTag]
       val stride = nOutput
 
 
-      val map = (0 until numEle).filter(i => input_data(i + input_offset) != paddingValue)
-        .map(i => {
+      val map = mutable.Map[Long, Vector]()
+      (0 until numEle).filter(i => input_data(i + input_offset) != paddingValue)
+        .foreach(i => {
           val k = ev.toType[Int](input_data(i + input_offset)) - 1
           val scale_ = if (null != count_data) scaleW /
             ev.toType[Double](count_data(k)) else scaleW
-          val gradient = psEv.array2Vector(go, i * stride + _gradOutput.storageOffset() - 1, stride)
-          (k.toLong, gradient.imul(scale_))
-        }).toMap
 
-      gradWeight = PSSparseRowTensor(map, nIndex, nOutput)
+          val index = k.toLong
+          val gradWeightFrame = map.getOrElse(index, psEv.zeroVector(nOutput))
+          val gradOutputFrame = psEv.array2Vector(go, i * stride + _gradOutput.storageOffset() - 1, stride).imul(scale_)
+
+          map(index) = gradWeightFrame.add(gradOutputFrame)
+        })
+
+      gradWeight = PSSparseRowTensor(map.toMap, nIndex, nOutput)
 
       pushGradient()
     }
@@ -264,7 +271,7 @@ class LookupTable[T: ClassTag]
   }
 
   def pushGradient(): Unit = {
-    val rowNums = (nOutput until 2 * nOutput).toArray
+    val rowNums = (nOutput * numSlot until nOutput * (1 + numSlot)).toArray
     val indices = VFactory.denseLongVector(gradWeight.getVectors.keys.toArray.sorted)
     val vectors = gradWeight.getVectors.map { case (key, vector) => (long2Long(key), vector) }.asJava
 
@@ -276,7 +283,7 @@ class LookupTable[T: ClassTag]
   }
 
   override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {
-    optimizer.update(matrixId, nOutput, epoch, batchSize).get()
+    optimizer.update(matrixId, nOutput, epoch, 1).get()
   }
 }
 

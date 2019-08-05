@@ -220,7 +220,7 @@ class LookupTableSparse[T: ClassTag]
   }
 
   def pushGradient(): Unit = {
-    val rowNums = (nOutput until 2 * nOutput).toArray
+    val rowNums = (nOutput * numSlot until nOutput * (1 + numSlot)).toArray
     val indices = VFactory.denseLongVector(gradWeight.getVectors.keys.toArray.sorted)
     val vectors = gradWeight.getVectors.map { case (key, vector) => (long2Long(key), vector) }.asJava
 
@@ -232,7 +232,7 @@ class LookupTableSparse[T: ClassTag]
   }
 
   override def update(optimizer: Optimizer, epoch: Int, batchSize: Int): Unit = {
-    optimizer.update(matrixId, nOutput, epoch, batchSize).get()
+    optimizer.update(matrixId, nOutput, epoch, 1).get()
   }
 }
 
