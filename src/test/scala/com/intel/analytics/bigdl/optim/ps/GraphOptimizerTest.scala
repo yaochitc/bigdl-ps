@@ -43,10 +43,9 @@ class GraphOptimizerTest extends Assert {
     model.add(Linear[Float]("firstLayer", 3, 4, 40))
     model.add(Linear[Float]("secondLayer", 3, 40, 20))
     model.add(Linear[Float]("thirdLayer", 3, 20, 3))
-    model.add(SoftMax[Float]())
 
     val criterion = new CrossEntropyCriterion[Float]()
-    val optimizer = new Adam(1.0, 0.99, 0.9)
+    val optimizer = new Adam(0.02, 0.99, 0.9)
 
     val opt = GraphOptimizer[Float](model, sampleRDD, criterion, optimizer, 150).setEndWhen(Trigger.maxEpoch(5000))
     val trainedModel = opt.optimize()

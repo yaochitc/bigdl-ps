@@ -61,11 +61,11 @@ class Linear[T: ClassTag]
   }
 
   def pushGradient(): Unit = {
-    psEv.incrementRowByMatrix(weightId, 1, gradWeight)
+    psEv.incrementRowByMatrix(weightId, numSlot, gradWeight)
     gradWeight.zero()
 
     if (withBias) {
-      psEv.incrementRow(biasId, 1, gradBias)
+      psEv.incrementRow(biasId, numSlot, gradBias)
       gradBias.zero()
     }
   }
