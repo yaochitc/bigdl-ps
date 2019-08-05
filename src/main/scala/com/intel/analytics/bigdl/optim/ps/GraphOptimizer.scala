@@ -3,7 +3,8 @@ package com.intel.analytics.bigdl.optim.ps
 import com.intel.analytics.bigdl.dataset._
 import com.intel.analytics.bigdl.nn.ps.abstractnn.ParameterSupport
 import com.intel.analytics.bigdl.optim.DistriOptimizer.logger
-import com.intel.analytics.bigdl.optim.Optimizer
+import com.intel.analytics.bigdl.optim.Optimizer.header
+import com.intel.analytics.bigdl.optim.{OptimMethod, Optimizer, Trigger}
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
 import com.intel.analytics.bigdl.utils.T
 import com.intel.analytics.bigdl.{Criterion, Module}
@@ -32,24 +33,23 @@ object GraphOptimizer {
         SampleToMiniBatch(batchSize, _featurePaddingParam, _labelPaddingParam))
         .asInstanceOf[DistributedDataSet[MiniBatch[T]]],
       _criterion = criterion,
-      _optimizer = optimizer
+      optimizer = optimizer
     ).asInstanceOf[Optimizer[T, MiniBatch[T]]]
   }
-}
 
-class GraphOptimizer[T: ClassTag]
-(_model: Module[T],
- _dataset: DistributedDataSet[MiniBatch[T]],
- _criterion: Criterion[T],
- _optimizer: AngelOptimizer
-)(implicit ev: TensorNumeric[T]) extends Optimizer[T, MiniBatch[T]](
-  _model, _dataset, _criterion) {
+  def optimize[T: ClassTag]
+  (
+    model: Module[T],
+    dataset: DistributedDataSet[MiniBatch[T]],
+    criterion: Criterion[T],
+    optimizer: AngelOptimizer,
+    endWhen: Trigger,
+    optimMethods: Map[String, OptimMethod[T]]
+  )(implicit ev: TensorNumeric[T]): Unit = {
+    val sc = dataset.originRDD().sparkContext
+    var wallClockTime = 0L
 
-  override def optimize(): Module[T] = {
-    val distDataset = dataset.asInstanceOf[DistributedDataSet[MiniBatch[T]]]
-
-    val sc = distDataset.originRDD().sparkContext
-    var dataRDD = distDataset.data(train = true)
+    var dataRDD = dataset.data(train = true)
 
     val driverState = T(
       "epoch" -> optimMethods.values.head.state("epoch"),
@@ -59,17 +59,19 @@ class GraphOptimizer[T: ClassTag]
     var recordsProcessedThisEpoch = 0
     val shuffleBefore = System.nanoTime()
     logger.info("Shuffle data")
-    distDataset.shuffle()
+    dataset.shuffle()
     val shuffleEnd = System.nanoTime()
     logger.info(s"Shuffle data complete. Takes ${(shuffleEnd - shuffleBefore) / 1e9}s")
 
-    val numSamples = distDataset.data(train = false).map(_.size()).reduce(_ + _)
+    val numSamples = dataset.data(train = false).map(_.size()).reduce(_ + _)
 
     model.asInstanceOf[ParameterSupport[T]].init()
-    val broadcast = sc.broadcast((model, criterion, _optimizer))
+    val broadcast = sc.broadcast((model, criterion, optimizer))
 
     while (!endWhen(driverState)) {
-      val recordsNum = sc.accumulator(0, "record number")
+      val lossSum = sc.doubleAccumulator
+      val recordsNum = sc.longAccumulator
+      val start = System.nanoTime()
 
       dataRDD.foreachPartition(data => {
         val batch = data.next()
@@ -86,21 +88,55 @@ class GraphOptimizer[T: ClassTag]
         val epoch = driverState[Int]("epoch")
         localModel.asInstanceOf[ParameterSupport[T]].update(localOptimizer, epoch, batchSize)
 
-        recordsNum += batchSize
+        lossSum.add(ev.toType[Float](loss))
+        recordsNum.add(batchSize)
       })
 
-      recordsProcessedThisEpoch += recordsNum.value
+      recordsProcessedThisEpoch += recordsNum.value.toInt
+      val end = System.nanoTime()
+      wallClockTime += end - start
+      driverState("isGradientUpdated") = true
+      driverState("Loss") = lossSum.value.toFloat
+
+      driverState("Throughput") = recordsNum.value.toFloat / ((end - start) / 1e9f)
+      val _header = header(driverState[Int]("epoch"), recordsProcessedThisEpoch, numSamples,
+        driverState[Int]("neval"), wallClockTime)
+      logger.info(s"${_header} Trained ${recordsNum.value} records in ${(end - start) / 1e9} " +
+        s"seconds. Throughput is ${driverState("Throughput")} records/second. Loss is ${
+          driverState("Loss")
+        }.")
 
       driverState("neval") = driverState[Int]("neval") + 1
       if (recordsProcessedThisEpoch >= numSamples) {
         // Epoch is finished
         driverState("epoch") = driverState[Int]("epoch") + 1
-        distDataset.shuffle()
-        dataRDD = distDataset.data(train = true)
+        dataset.shuffle()
+        dataRDD = dataset.data(train = true)
         recordsProcessedThisEpoch = 0
       }
     }
 
+    model
+  }
+}
+
+class GraphOptimizer[T: ClassTag]
+(_model: Module[T],
+ _dataset: DistributedDataSet[MiniBatch[T]],
+ _criterion: Criterion[T],
+ optimizer: AngelOptimizer
+)(implicit ev: TensorNumeric[T]) extends Optimizer[T, MiniBatch[T]](
+  _model, _dataset, _criterion) {
+
+  override def optimize(): Module[T] = {
+    val distDataset = dataset.asInstanceOf[DistributedDataSet[MiniBatch[T]]]
+
+    GraphOptimizer.optimize(model,
+      distDataset,
+      criterion,
+      optimizer,
+      endWhen,
+      optimMethods)
     model
   }
 }
