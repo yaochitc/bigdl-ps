@@ -1,8 +1,11 @@
 package com.intel.analytics.bigdl.optim.ps
 
 import com.intel.analytics.bigdl.dataset.Sample
-import com.intel.analytics.bigdl.nn.ps.{Linear, Sequential}
-import com.intel.analytics.bigdl.nn.CrossEntropyCriterion
+import com.intel.analytics.bigdl.mkl.Memory
+import com.intel.analytics.bigdl.nn.{CrossEntropyCriterion, KullbackLeiblerDivergenceCriterion}
+import com.intel.analytics.bigdl.nn.mkldnn.{HeapData, Input, ReorderMemory, SoftMax}
+import com.intel.analytics.bigdl.nn.mkldnn.Phase.TrainingPhase
+import com.intel.analytics.bigdl.nn.mkldnn.ps.{Linear, Sequential}
 import com.intel.analytics.bigdl.optim.Trigger
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.utils.Engine
@@ -10,9 +13,9 @@ import com.tencent.angel.ml.core.optimizer.Adam
 import com.tencent.angel.spark.context.PSContext
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
-import org.junit.{Assert, Test}
+import org.junit.Test
 
-class GraphOptimizerTest extends Assert {
+class MklOptimizerTest {
   @Test
   def testOptimize(): Unit = {
     Logger.getLogger("org").setLevel(Level.ERROR)
@@ -40,10 +43,16 @@ class GraphOptimizerTest extends Assert {
     })
 
     val batchSize = 150
-    val model = Sequential[Float]()
-    model.add(Linear[Float]("firstLayer", 3, 4, 100))
-    model.add(Linear[Float]("secondLayer", 3, 100, 100))
-    model.add(Linear[Float]("thirdLayer", 3, 100, 3))
+    val inputShape = Array(batchSize, 4)
+    val outputShape = Array(batchSize, 3)
+    val model = Sequential()
+    model.add(Input(inputShape, Memory.Format.nc))
+    model.add(Linear("firstLayer", 3, 4, 100))
+    model.add(Linear("secondLayer", 3, 100, 100))
+    model.add(Linear("thirdLayer", 3, 100, 3))
+
+    model.add(ReorderMemory(HeapData(outputShape, Memory.Format.nc)))
+    model.compile(TrainingPhase)
 
     val criterion = new CrossEntropyCriterion[Float]()
     val optimizer = new Adam(0.02, 0.99, 0.9)
