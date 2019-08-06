@@ -1,12 +1,14 @@
 package com.intel.analytics.bigdl.optim.ps
 
 import com.intel.analytics.bigdl.dataset.Sample
-import com.intel.analytics.bigdl.nn.ps.{Linear, Sequential}
-import com.intel.analytics.bigdl.nn.{CrossEntropyCriterion, SoftMax}
+import com.intel.analytics.bigdl.nn.CrossEntropyCriterion
+import com.intel.analytics.bigdl.nn.mkldnn.Phase.TrainingPhase
+import com.intel.analytics.bigdl.nn.mkldnn.ps.Linear
+import com.intel.analytics.bigdl.nn.mkldnn.ps.Sequential
 import com.intel.analytics.bigdl.optim.Trigger
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.utils.Engine
-import com.tencent.angel.ml.core.optimizer.{Adam, SGD}
+import com.tencent.angel.ml.core.optimizer.Adam
 import com.tencent.angel.spark.context.PSContext
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
@@ -39,10 +41,12 @@ class GraphOptimizerTest extends Assert {
       Sample[Float](feature, Tensor(Array(getLabel(subs(4))), Array(1)))
     })
 
-    val model = Sequential[Float]()
-    model.add(Linear[Float]("firstLayer", 3, 4, 40))
-    model.add(Linear[Float]("secondLayer", 3, 40, 20))
-    model.add(Linear[Float]("thirdLayer", 3, 20, 3))
+    val model = Sequential()
+    model.add(Linear("firstLayer", 3, 4, 40))
+    model.add(Linear("secondLayer", 3, 40, 20))
+    model.add(Linear("thirdLayer", 3, 20, 3))
+
+    model.compile(TrainingPhase)
 
     val criterion = new CrossEntropyCriterion[Float]()
     val optimizer = new Adam(0.02, 0.99, 0.9)

@@ -1,6 +1,5 @@
 package com.intel.analytics.bigdl.nn.ps
 
-import com.intel.analytics.bigdl.nn.abstractnn.Initializable
 import com.intel.analytics.bigdl.nn.ps.abstractnn.ParameterSupport
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.tensor.TensorNumericMath.TensorNumeric
@@ -22,7 +21,7 @@ class Linear[T: ClassTag]
  initGradBias: Tensor[T] = null
 )(implicit ev: TensorNumeric[T], psEv: PSTensorNumeric[T])
   extends com.intel.analytics.bigdl.nn.Linear[T](inputSize, outputSize, withBias, null, null, initWeight, initBias, initGradWeight, initGradBias)
-    with ParameterSupport[T] with Initializable {
+    with ParameterSupport[T] {
   private val weightCtx =
     PSMatrixUtils.createPSMatrixCtx(s"${name}_weight", 1 + numSlot, inputSize * outputSize, PSUtils.getRowType(ev.getType()))
   PSMatrixUtils.createPSMatrix(weightCtx)
@@ -44,7 +43,7 @@ class Linear[T: ClassTag]
   }
 
   override def updateOutput(input: Tensor[T]): Tensor[T] = {
-    pullParameters(input)
+    pullParameters()
     super.updateOutput(input)
   }
 
@@ -53,7 +52,7 @@ class Linear[T: ClassTag]
     pushGradient()
   }
 
-  def pullParameters(input: Tensor[T]): Unit = {
+  def pullParameters(): Unit = {
     weight.copy(psEv.getRowAsMatrix(weightId, 0, outputSize, inputSize))
     if (withBias) {
       bias.copy(psEv.getRow(biasId, 0))

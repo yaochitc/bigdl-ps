@@ -10,16 +10,16 @@
 
     <properties>
         <spark.version>2.2.3</spark.version>
-        <angel.version>2.2.0</angel.version>
-        <bigdl.version>0.7.2</bigdl.version>
+        <angel.version>2.2.1</angel.version>
+        <bigdl.version>0.9.0</bigdl.version>
         <scala.version>2.11.8</scala.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.intel.analytics.bigdl</groupId>
-            <artifactId>bigdl-SPARK_2.2</artifactId>
-            <version>${bigdl.version}</version>
+            <artifactId>bigdl-SPARK_2.4</artifactId>
+            <version>0.9.0</version>
         </dependency>
         <dependency>
             <groupId>com.tencent.angel</groupId>
